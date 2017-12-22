@@ -1,6 +1,6 @@
-![Github All Releases](https://img.shields.io/github/downloads/DRSDavidSoft/SerialUART/total.svg)
-**Windows:** ![appveyor-badge](https://ci.appveyor.com/api/projects/status/github/DRSDavidSoft/serialuart?svg=true)
-**Linux/OSX:** ![travis-badge](https://api.travis-ci.org/DRSDavidSoft/SerialUART.svg?branch=master)
+![Github All Releases](https://img.shields.io/github/downloads/DRSDavidSoft/SerialUART/total.svg?label=Downloads&style=for-the-badge)
+![Windows Build Status](https://img.shields.io/appveyor/ci/DRSDavidSoft/serialuart.svg?label=Windows%20build&style=for-the-badge)
+![Linux Build Status](https://img.shields.io/travis/DRSDavidSoft/SerialUART/master.svg?label=Linux%20build&style=for-the-badge)
 
 SerialUART Project, v1.3-dev
 =============================

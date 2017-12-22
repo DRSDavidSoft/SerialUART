@@ -370,14 +370,14 @@ int main(int argc, char *argv[])
 		}
 	}
 
-
+    // TODO: Win32 API: how to read the serial, or exit within a timeout if wasn't a data
 	// https://stackoverflow.com/a/25428844/1454514
 
 	if (true)
 	{	
 		time(&start);
 		
-		// No robot id specified - print everything to console
+		// print everything to console
 		while(1)
 		{
 			ReadFile(fdSerial, &c, 1, &bytes_read, NULL);
@@ -388,7 +388,7 @@ int main(int argc, char *argv[])
 				if (c == 0 || c == 26) exit(0); // If a CTRL+Z is received
 				else {
 					printf("%c", c);
-					// if (sendthistosomewhere == 1) send_result(c);
+					// if (debug > 1) debug_log(c);
 				}
 			} else
 			if (read_timeout >= 0) {
@@ -396,7 +396,7 @@ int main(int argc, char *argv[])
 				timeout = difftime(stop, start);
 				if (timeout >= read_timeout) {
 					// Nothing to read for `timeout` seconds.
-					if (debug) fprintf(stderr, "\nThere was no reply for %.f seconds", timeout);
+					if (debug > 1) fprintf(stderr, "\nThere was no reply for %.f seconds", timeout);
 					exit(124); // Return code for timeout EXIT_TIMEDOUT
 				}
 			}

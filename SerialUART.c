@@ -33,8 +33,8 @@ DWORD dwBytesWritten = 0;
 #define HANDLE int
 #define INVALID_HANDLE_VALUE -1
 #define DTR_CONTROL_ENABLE true
-#define DTR_CONTROL_DISABLE true
-#define RTS_CONTROL_ENABLE false
+#define DTR_CONTROL_DISABLE false
+#define RTS_CONTROL_ENABLE true
 #define RTS_CONTROL_DISABLE false
 #endif
 
@@ -66,14 +66,23 @@ bool verify_only = 0;
 
     TODO: 
 
+    // Arduino wiki:
+    // https://playground.arduino.cc/Main/DisablingAutoResetOnSerialConnection
+
+    // Win32 API resources:
 	// https://github.com/xanthium-enterprises/Serial-Programming-Win32API-C
 	// http://xanthium.in/Serial-Port-Programming-using-Win32-API
+    // https://batchloaf.wordpress.com/serialsend/
 
 	// https://www.ibm.com/support/knowledgecenter/SSLTBW_1.13.0/com.ibm.zos.r13.bpxbd00/rtcgis.htm
 	// https://www.cs.fsu.edu/~baker/devices/lxr/source/2.6.25/linux/drivers/serial/suncore.c
 	// https://raw.githubusercontent.com/WiringPi/WiringPi/master/examples/serialTest.c
 	// http://www.i-programmer.info/programming/cc/10027-serial-c-and-the-raspberry-pi.html?start=2
 	
+    // Linux Serial resources:
+    // https://github.com/todbot/arduino-serial/blob/master/arduino-serial.c
+    // http://xanthium.in/Serial-Port-Programming-on-Linux
+
 	// linux-serial-test is GOLD
 	// https://github.com/cbrake/linux-serial-test
 	
@@ -84,6 +93,27 @@ bool verify_only = 0;
 	// https://www.experts-exchange.com/questions/26929457/How-to-set-DTR-on-termios-in-Linux.html
 	// http://xanthium.in/Controlling-RTS-and-DTR-pins-SerialPort-in-Linux
 	// https://stackoverflow.com/questions/30143244/disable-dtr-with-termios-h-for-arduino
+    // https://github.com/GuLinux/GalaxyHunter/blob/master/old/set-serial-signal/set-serial-signal.c
+    // https://github.com/xanthium-enterprises/RTS-DTR-Pin-Control-Linux/blob/master/serial_rts_dtr.c
+
+    // Termios on OS X resources:
+    // https://stackoverflow.com/questions/28659045/termios-configuration
+
+    // Makefile example:
+    // https://raw.githubusercontent.com/todbot/arduino-serial/master/Makefile
+
+    // NMake on Windows:
+    // https://msdn.microsoft.com/en-us/library/f35ctcxw.aspx?f=255&MSPPError=-2147217396
+    // https://stackoverflow.com/questions/45882757/how-to-write-makefilenmake-for-visual-studio-build-tool-cl-exe
+
+    // Usage example:
+    // http://todbot.com/blog/2006/12/06/arduino-serial-c-code-to-talk-to-arduino/
+    // http://todbot.com/blog/2013/04/29/arduino-serial-updated/
+
+    // How to find all serial devices (ttyS, ttyUSB, ...) on Linux without opening them?
+    // https://stackoverflow.com/q/2530096/1454514
+
+
 
 */
 
