@@ -8,3 +8,6 @@ This program send text via serial port, waits for the reply to read and prints i
 
 ### Platform support
 The future plan for SerialUART is to support Windows, Linux and OSX. Currently as of v1.3, Windows support is completed.
+
+### Compiling/Installation
+`TODO:`
