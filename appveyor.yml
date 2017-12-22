@@ -1,0 +1,7 @@
+platform:
+    - x86
+    - x64
+
+build_script:
+    - cmd: cl.exe main.c
+
