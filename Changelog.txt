@@ -1,0 +1,18 @@
+
+SerialUART Cross-platform
+Author: David Refoua
+Website: www.Refoua.me
+--------------------------------
+
++ New Feature, major improvement
+! Modified, likely incompatible
+* Fixed, minor improvement
+- Removed, deprecated
+
+Changelog:
+
+v0.1
+  TBA
+
+v0.0
+  Initial Beta Stage
