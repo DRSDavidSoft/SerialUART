@@ -3,6 +3,10 @@ platform:
     - x64
 
 build_script:
+
+    # Using GNU C Compiler (MinGW-compatible) on Windows
+    - cmd: gcc -o main.exe main.c
+
+    # Using Microsoft Visual Studio Compiler
     - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin\vcvars32.bat"
     - cmd: cl.exe main.c
-
