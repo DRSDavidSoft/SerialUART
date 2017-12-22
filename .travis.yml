@@ -1,0 +1,12 @@
+language: c
+
+comiler: 
+  - gcc
+
+os: 
+  - linux
+  - osx
+
+script: gcc -o main.elf main.c
+
+
