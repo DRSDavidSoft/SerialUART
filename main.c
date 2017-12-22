@@ -58,7 +58,7 @@ void SetConfig(void)
         //	baudrate (default 57600), 1 start bit, 1 stop bit, no parity
         dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
         if (GetCommState(fdSerial, &dcbSerialParams) == 0)
-            ExitMessage("Error getting device state", 1);
+            ExitMessage("Error getting device state", EXIT_FAILURE);
         dcbSerialParams.BaudRate = baudrate;
         dcbSerialParams.ByteSize = 8; //bytesize
         dcbSerialParams.StopBits = ONESTOPBIT;
@@ -70,7 +70,7 @@ void SetConfig(void)
         //dcbSerialParams.fDsrSensitivity = FALSE;
         //dcbSerialParams.fAbortOnError = TRUE;
         if(SetCommState(fdSerial, &dcbSerialParams) == 0)
-            ExitMessage("Error setting device parameters", 1);
+            ExitMessage("Error setting device parameters", EXIT_FAILURE);
 
         // Set COM port timeout settings
         timeouts.ReadIntervalTimeout = 50;
@@ -79,7 +79,7 @@ void SetConfig(void)
         timeouts.WriteTotalTimeoutConstant = 50;
         timeouts.WriteTotalTimeoutMultiplier = 10;
         if(SetCommTimeouts(fdSerial, &timeouts) == 0)
-            ExitMessage("Error setting timeouts", 1);
+            ExitMessage("Error setting timeouts", EXIT_FAILURE);
 	#endif
 
 }
@@ -94,13 +94,13 @@ void CloseSerialPort(void)
 		if (CloseHandle(fdSerial) == 0)
 		{
 			if (debug > 0) fprintf(stderr, "Error\n");
-			_exit(1);
+			_exit(EXIT_FAILURE);
 		}
 		else if (debug > 0) fprintf(stderr, "OK\n");
 	}
 	#endif
 	
-	_exit(0); // exit normally
+	_exit(EXIT_SUCCESS); // exit normally
 }
 
 
@@ -119,9 +119,9 @@ int main(int argc, char *argv[])
 	while (argn < argc)
 	{
 		// Process next command line argument
-		if (strcmp(argv[argn], "/devnum") == 0)
+		if (strcmp(argv[argn], "/port") == 0)
 		{
-			if (++argn >= argc) ExitMessage("Error: no device number specified", 1);
+			if (++argn >= argc) ExitMessage("Error: no serial port specified", 1);
 			//else if (debug) fprintf(stderr, "Device number %d specified\n", dev_number);
 
 			// Set device number to specified value
@@ -164,7 +164,7 @@ int main(int argc, char *argv[])
 			strcpy(buffer, argv[argn]);
 		}
 		/*
-		else if (strcmp(argv[argn], "/sothething") == 0)
+		else if (strcmp(argv[argn], "/dothething") == 0)
 		{
 			option_dothething = 1;
 		}
@@ -364,7 +364,7 @@ int main(int argc, char *argv[])
 				timeout = difftime(stop, start);
 				if (timeout >= read_timeout) {
 					if (debug) fprintf(stderr, "\nVerification timed out in %.f seconds", timeout);
-					exit(124); // Return code for timeout EXIT_TIMEDOUT
+					exit(EXIT_TIMEDOUT);
 				}
 			}
 		}

@@ -17,14 +17,6 @@
 
 #define MESSAGE_LENGTH 100
 
-#ifdef MAX_PATH
-#define PATH_LENGTH MAX_PATH
-#elif defined PATH_MAX
-#define PATH_LENGTH PATH_MAX
-#else
-#error "No `MAX_PATH` or `PATH_MAX` defined."
-#endif
-
 #ifdef OS_WIN
 DCB dcbSerialParams = {0};
 COMMTIMEOUTS timeouts = {0};

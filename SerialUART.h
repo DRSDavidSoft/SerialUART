@@ -50,4 +50,25 @@
 // TODO: include defined from here, for example #define EXIT_TIMEDOUT 124
 // https://github.com/wertarbyte/coreutils/blob/master/src/timeout.c
 
+#ifdef MAX_PATH
+#define PATH_LENGTH MAX_PATH
+#elif defined PATH_MAX
+#define PATH_LENGTH PATH_MAX
+#else
+#error "No `MAX_PATH` or `PATH_MAX` defined."
+#endif
+
+// Define C values
+#ifndef EXIT_SUCCESS // Return code for a successful operation
+#define EXIT_SUCCESS 0
+#endif
+
+#ifndef EXIT_FAILURE // Return code for a failure operation
+#define EXIT_FAILURE 1
+#endif
+
+#ifndef EXIT_TIMEDOUT // Return code for timeout
+#define EXIT_TIMEDOUT 124
+#endif
+
 #endif
