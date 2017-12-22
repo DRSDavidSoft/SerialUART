@@ -17,6 +17,7 @@ _*.sh
 
 # Compiled .exe files
 *.exe
+*.obj
 
 # =========================
 
