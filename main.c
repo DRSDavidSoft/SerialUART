@@ -54,32 +54,32 @@ void SetConfig(void)
 	// Set device parameters:
 
 	#ifdef OS_WIN
-        // Reference: https://msdn.microsoft.com/en-us/library/windows/desktop/aa363214(v=vs.85).aspx
-        //	baudrate (default 57600), 1 start bit, 1 stop bit, no parity
-        dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
-        if (GetCommState(fdSerial, &dcbSerialParams) == 0)
-            ExitMessage("Error getting device state", EXIT_FAILURE);
-        dcbSerialParams.BaudRate = baudrate;
-        dcbSerialParams.ByteSize = 8; //bytesize
-        dcbSerialParams.StopBits = ONESTOPBIT;
-        dcbSerialParams.Parity = NOPARITY;
-        dcbSerialParams.fDtrControl = dtr_control; //DTR_CONTROL_DISABLE;
-        dcbSerialParams.fRtsControl = rts_control; //RTS_CONTROL_DISABLE;
-        //dcbSerialParams.fOutxCtsFlow = FALSE;
-        //dcbSerialParams.fOutxDsrFlow = FALSE;
-        //dcbSerialParams.fDsrSensitivity = FALSE;
-        //dcbSerialParams.fAbortOnError = TRUE;
-        if(SetCommState(fdSerial, &dcbSerialParams) == 0)
-            ExitMessage("Error setting device parameters", EXIT_FAILURE);
+		// Reference: https://msdn.microsoft.com/en-us/library/windows/desktop/aa363214(v=vs.85).aspx
+		//	baudrate (default 57600), 1 start bit, 1 stop bit, no parity
+		dcbSerialParams.DCBlength = sizeof(dcbSerialParams);
+		if (GetCommState(fdSerial, &dcbSerialParams) == 0)
+			ExitMessage("Error getting device state", EXIT_FAILURE);
+		dcbSerialParams.BaudRate = baudrate;
+		dcbSerialParams.ByteSize = 8; //bytesize
+		dcbSerialParams.StopBits = ONESTOPBIT;
+		dcbSerialParams.Parity = NOPARITY;
+		dcbSerialParams.fDtrControl = dtr_control; //DTR_CONTROL_DISABLE;
+		dcbSerialParams.fRtsControl = rts_control; //RTS_CONTROL_DISABLE;
+		//dcbSerialParams.fOutxCtsFlow = FALSE;
+		//dcbSerialParams.fOutxDsrFlow = FALSE;
+		//dcbSerialParams.fDsrSensitivity = FALSE;
+		//dcbSerialParams.fAbortOnError = TRUE;
+		if(SetCommState(fdSerial, &dcbSerialParams) == 0)
+			ExitMessage("Error setting device parameters", EXIT_FAILURE);
 
-        // Set COM port timeout settings
-        timeouts.ReadIntervalTimeout = 50;
-        timeouts.ReadTotalTimeoutConstant = 50;
-        timeouts.ReadTotalTimeoutMultiplier = 10;
-        timeouts.WriteTotalTimeoutConstant = 50;
-        timeouts.WriteTotalTimeoutMultiplier = 10;
-        if(SetCommTimeouts(fdSerial, &timeouts) == 0)
-            ExitMessage("Error setting timeouts", EXIT_FAILURE);
+		// Set COM port timeout settings
+		timeouts.ReadIntervalTimeout = 50;
+		timeouts.ReadTotalTimeoutConstant = 50;
+		timeouts.ReadTotalTimeoutMultiplier = 10;
+		timeouts.WriteTotalTimeoutConstant = 50;
+		timeouts.WriteTotalTimeoutMultiplier = 10;
+		if(SetCommTimeouts(fdSerial, &timeouts) == 0)
+			ExitMessage("Error setting timeouts", EXIT_FAILURE);
 	#endif
 
 }
@@ -370,7 +370,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-    // TODO: Win32 API: how to read the serial, or exit within a timeout if wasn't a data
+	// TODO: Win32 API: how to read the serial, or exit within a timeout if wasn't a data
 	// https://stackoverflow.com/a/25428844/1454514
 
 	if (true)
