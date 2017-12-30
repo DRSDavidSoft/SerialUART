@@ -32,7 +32,7 @@
 #endif
 
 #ifdef OS_LINUX
-#include <limits.h>   /* */
+#include <limits.h>   /* Used to derrive PATH_MAX length */
 #include <errno.h>    /* Error number definitions */
 #include <fcntl.h>    /* File control definitions */
 #include <termios.h>  /* POSIX terminal control definitions */
@@ -50,6 +50,7 @@
 // TODO: include defined from here, for example #define EXIT_TIMEDOUT 124
 // https://github.com/wertarbyte/coreutils/blob/master/src/timeout.c
 
+/*
 #ifdef MAX_PATH
 #define PATH_LENGTH MAX_PATH
 #elif defined PATH_MAX
@@ -57,6 +58,7 @@
 #else
 #error "No `MAX_PATH` or `PATH_MAX` defined."
 #endif
+*/
 
 // Define C values
 #ifndef EXIT_SUCCESS // Return code for a successful operation

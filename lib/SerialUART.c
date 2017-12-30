@@ -34,12 +34,11 @@ HANDLE fdSerial = INVALID_HANDLE_VALUE;
 bool dtr_control = DTR_CONTROL_ENABLE;
 bool rts_control = RTS_CONTROL_DISABLE;
 
-unsigned char argbuff[PATH_LENGTH];
-unsigned char buffer[PATH_LENGTH];
-unsigned char text_to_send[PATH_LENGTH];
-unsigned char digits[PATH_LENGTH];
+unsigned char buffer[4096];
+unsigned char text_to_send[2048];
+unsigned char digits[512];
 
-char dev_name[PATH_LENGTH] = "";
+char dev_name[512] = "";
 int dev_number = -1;
 int baudrate = 57600;
 int scan_max = 30;
