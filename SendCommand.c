@@ -111,7 +111,9 @@ char* getProgramName( char* path ) {
 	
 	char *result = malloc(128);
 	
-	for ( int i = 0; path[i] != '\0'; i++ ) {
+	int i;
+	
+	for ( i = 0; path[i] != '\0'; i++ ) {
 		if ( path[i] == '\\' ) path[i] = '/';
 	}
 	
