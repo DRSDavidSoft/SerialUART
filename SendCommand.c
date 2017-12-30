@@ -15,9 +15,9 @@ static const char VERSION[] = "1.3-dev";
 // ------------------------------------------------------------------
 // Include the required header files
 // ------------------------------------------------------------------
-#include "os_macros.h"   /* Detect which platform we're currently running on */
-#include "SerialUART.h"  /* Include platform specific libraries */
-#include "SerialUART.c"
+#include "lib/os_macros.h"   /* Detect which platform we're currently running on */
+#include "lib/SerialUART.h"  /* Include platform specific libraries */
+#include "lib/SerialUART.c"
 
 
 // ------------------------------------------------------------------
