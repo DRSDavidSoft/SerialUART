@@ -23,5 +23,3 @@ build_script:
     # Now check both binaries
     - cmd: SendCommandMinGW64.exe --version
     - cmd: SendCommand.exe --version
-	
-	
