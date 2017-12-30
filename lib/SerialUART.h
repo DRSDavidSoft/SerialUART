@@ -21,6 +21,8 @@
 //       contact me to add support for more platforms.
 //
 
+#include "os_macros.h"   /* Detect which platform we're currently running on */
+
 #ifndef __SERIALUART_H__
 #define __SERIALUART_H__
 
@@ -38,6 +40,7 @@
 #include <termios.h>  /* POSIX terminal control definitions */
 #include <unistd.h>   /* UNIX standard function definitions */
 #include <sys/ioctl.h>
+#error "Sorry, Linux is not supported in this version of SerialUART."
 #endif
 
 // Platform independent headers
