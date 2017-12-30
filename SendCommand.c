@@ -161,10 +161,6 @@ bool matchArgument( char *arg, char *shortarg, char *longarg, bool display ) {
 void parseArguments( int argc, char *argv[], bool show_usage ) {
 	
 	strcpy(buffer, "");
-	strcpy(argbuff, "");
-	
-	// Find the application's CLI name
-	char *app_name = getProgramName( argv[0] );
 	
 	// Parse command line arguments
 	int argn = 1;
@@ -285,6 +281,7 @@ void parseArguments( int argc, char *argv[], bool show_usage ) {
 			
 			// Unknown command line argument
 			if (debug > 0) fprintf(stderr, "Unrecognized option: %s\n", argv[argn]);
+			// TODO: move out of this funtion
 		}
 
 		argn++; // Increment command line argument counter
@@ -294,11 +291,15 @@ void parseArguments( int argc, char *argv[], bool show_usage ) {
 
 int main(int argc, char *argv[])
 {
+	
+	// Find the application's CLI name
+	char *app_name = getProgramName( argv[0] );
+	
 	// Parse arguments
 	parseArguments( argc, argv, false );
 
 	// Welcome message
-	WelcomeMsg( argv[0] );
+	WelcomeMsg( app_name );
 	
 	// __commentme__
 	if ( noExec == 1 ) exit(0);
