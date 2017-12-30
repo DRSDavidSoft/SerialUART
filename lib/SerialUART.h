@@ -34,7 +34,7 @@
 #endif
 
 #ifdef OS_POSIX
-#include <limits.h>   /* Used to derrive PATH_MAX length */
+//#include <limits.h>   /* Used to derrive PATH_MAX length */
 #include <errno.h>    /* Error number definitions */
 #include <fcntl.h>    /* File control definitions */
 #include <termios.h>  /* POSIX terminal control definitions */

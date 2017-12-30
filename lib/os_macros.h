@@ -49,8 +49,8 @@
 #define OS_ANDROID
 #endif
 
-
-#if (defined OS_LINUX || defined OS_BSD || defined OS_UNIX)
+// Now check for POSIX-compatible OSes
+#if (defined OS_LINUX || defined OS_BSD || defined OS_UNIX || defined OS_APPLE)
 #define OS_POSIX
 #endif
 
