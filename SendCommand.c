@@ -38,8 +38,7 @@ void ExitMessage(const char* error_message, int error)
 {
 	if (debug > 0) {
 		// Print an error message
-		fprintf(stderr, error_message);
-		fprintf(stderr, "\n");
+		fprintf(stderr, "%s\n", error_message);
 	}
 
 	// Exit the program
@@ -90,13 +89,13 @@ void CloseSerialPort(void)
 	if (fdSerial != INVALID_HANDLE_VALUE)
 	{
 		// Close serial port
-		if (debug > 0) fprintf(stderr, "\nClosing serial port... ");
+		if (debug > 0) fprintf(stderr, "\n%s", "Closing serial port... ");
 		if (CloseHandle(fdSerial) == 0)
 		{
-			if (debug > 0) fprintf(stderr, "Error\n");
+			if (debug > 0) fprintf(stderr, "%s\n", "Error");
 			_exit(EXIT_FAILURE);
 		}
-		else if (debug > 0) fprintf(stderr, "OK\n");
+		else if (debug > 0) fprintf(stderr, "%s\n", "OK");
 	}
 	#endif
 	
@@ -316,7 +315,7 @@ int main(int argc, char *argv[])
 	if (strlen(buffer) == 0)
 	{
 		//ExitMessage("Error: no command is specified", 1);
-		fprintf(stderr, "No command is specified\n");
+		fprintf(stderr, "%s\n", "No command is specified");
 	}
 	 
 	// If hex parsing is enabled, modify text to send
@@ -404,7 +403,7 @@ int main(int argc, char *argv[])
 	if (strlen(buffer) > 0)
 	{
 		DWORD bytes_written, total_bytes_written = 0;
-		if (debug) fprintf(stderr, "Sending text... ");
+		if (debug) fprintf(stderr, "%s", "Sending text... ");
 		while(total_bytes_written < m)
 		{
 			// Add a little bit of delay
@@ -421,7 +420,7 @@ int main(int argc, char *argv[])
 		if (debug) fprintf(stderr, "\n%d bytes written to %s\n", total_bytes_written, dev_name);
 	}
 	
-	if (debug) fprintf(stderr, (strlen(buffer) > 0) ? "\nReply: \n\n" : "");
+	if (debug) fprintf(stderr, "%s", (strlen(buffer) > 0) ? "\nReply: \n\n" : "");
 	
 	int state = 1;
 	
