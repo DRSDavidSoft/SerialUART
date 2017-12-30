@@ -50,6 +50,8 @@ int read_timeout = 10;
 int debug = 1; // print some info by default
 int m, n;
 
+int noExec = 0;
+
 bool parse_hex_bytes = 0;
 bool welcome_msg = 1;
 bool verify_only = 0;

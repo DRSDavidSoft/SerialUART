@@ -108,18 +108,77 @@ void CloseSerialPort(void)
 // Main program structure and definitions
 // ------------------------------------------------------------------
 
-int main(int argc, char *argv[])
-{
+char* getProgramName( char* path ) {
+	
+	char result[512];
+	
+	for ( int i = 0; path[i] != '\0'; i++ ) {
+		if ( path[i] == '\\' ) path[i] = '/';
+	}
+	
+	char *pch = strrchr(path, '/');
+	strcpy( result, pch + 1 );
+	
+	return result;
+	
+}
+
+bool matchArgument( char *arg, char *shortarg, char *longarg, bool display ) {
+	
+	bool result = false;
+	
+	if ( strlen(arg) == 0 ) result = false;
+	else {
+		
+		if ( strlen(longarg) > 0 ) {
+		
+			if ( strncmp(arg, "/", 1) == 0 )
+				result |= ( strcmp(arg + 1, longarg) == 0 );
+			
+			if ( strncmp(arg, "--", 2) == 0 )
+				result |= ( strcmp(arg + 2, longarg) == 0 );
+		}
+		
+		if ( strlen(shortarg) > 0 ) {
+			
+			if ( strncmp(arg, "-", 1) == 0 )
+				result |= ( strcmp(arg + 1, shortarg) == 0 );
+			
+		}
+		
+		if ( display == true ) {
+			// TODO: 
+			//char message[] = "Does something.";
+			//fprintf(stderr, "  -%s --%s\t%s\n", shortarg, longarg, message);
+		}
+		
+	}
+	
+	return result;
+	
+}
+
+void parseArguments( int argc, char *argv[], bool show_usage ) {
 	
 	strcpy(buffer, "");
 	strcpy(argbuff, "");
+	
+	// Find the application's CLI name
+	char *app_name = getProgramName( argv[0] );
 	
 	// Parse command line arguments
 	int argn = 1;
 	while (argn < argc)
 	{
+		
 		// Process next command line argument
-		if (strcmp(argv[argn], "/port") == 0)
+		if ( matchArgument( argv[argn], "h", "hello", show_usage ) == true )
+		{
+			ExitMessage("Hello, world!", 1);
+		}
+		
+		// Process next command line argument
+		else if ( matchArgument( argv[argn], "p", "device", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: no serial port specified", 1);
 			//else if (debug) fprintf(stderr, "Device number %d specified\n", dev_number);
@@ -136,7 +195,7 @@ int main(int argc, char *argv[])
 			id = atoi(argv[argn]);
 		}
 		*/
-		else if (strcmp(argv[argn], "/baudrate") == 0)
+		else if ( matchArgument( argv[argn], "b", "baudrate", show_usage ) == true )
 		{
 			// Parse baud rate
 			if (++argn >= argc) ExitMessage("Error: no baudrate value specified", 1);
@@ -145,7 +204,7 @@ int main(int argc, char *argv[])
 			// Set baudrate to specified value
 			baudrate = atoi(argv[argn]);
 		}
-		else if (strcmp(argv[argn], "/hex") == 0)
+		else if ( matchArgument( argv[argn], "H", "hex", show_usage ) == true )
 		{
 			// Parse flag for hex byte parsing.
 			// If this flag is set, then arbitrary byte values can be
@@ -155,7 +214,7 @@ int main(int argc, char *argv[])
 			// return character, '\r' which has hex value 0x0D.
 			parse_hex_bytes = 1;
 		}
-		else if (strcmp(argv[argn], "/command") == 0)
+		else if ( matchArgument( argv[argn], "s", "command", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: no command specified", 1);
 			//else if (debug) fprintf(stderr, "Specified Command:\n%d\n", argv[argn]);
@@ -169,7 +228,7 @@ int main(int argc, char *argv[])
 			option_dothething = 1;
 		}
 		*/
-		else if (strcmp(argv[argn], "/dtr") == 0)
+		else if ( matchArgument( argv[argn], "", "dtr", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: DTR control parameter was not specified", 1);
 
@@ -177,7 +236,7 @@ int main(int argc, char *argv[])
 			if (strcmp(argv[argn], "on" ) == 0) dtr_control = DTR_CONTROL_ENABLE;  else
 			ExitMessage("Error: DTR control parameter invalid", 1);
 		}
-		else if (strcmp(argv[argn], "/rts") == 0)
+		else if ( matchArgument( argv[argn], "", "rts", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: RTS control parameter was not specified", 1);
 
@@ -185,35 +244,39 @@ int main(int argc, char *argv[])
 			if (strcmp(argv[argn], "on" ) == 0) rts_control = RTS_CONTROL_ENABLE;  else
 			ExitMessage("Error: RTS control parameter invalid", 1);
 		}
-		else if (strcmp(argv[argn], "/wait") == 0)
+		else if ( matchArgument( argv[argn], "W", "wait", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: no boot wait delay value specified", 1);
 
 			boot_wait_time = atoi(argv[argn]);
 		}
-		else if (strcmp(argv[argn], "/interval") == 0)
+		else if ( matchArgument( argv[argn], "i", "interval", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: no interval time value specified", 1);
 
 			interval_time = atoi(argv[argn]);
 		}
-		else if (strcmp(argv[argn], "/timeout") == 0)
+		else if ( matchArgument( argv[argn], "t", "timeout", show_usage ) == true )
 		{
 			if (++argn >= argc) ExitMessage("Error: no read timeout value specified", 1);
 
 			read_timeout = atoi(argv[argn]);
 		}
-		else if (strcmp(argv[argn], "/verifyonly") == 0)
+		else if ( matchArgument( argv[argn], "", "verifyonly", show_usage ) == true )
 		{
 			verify_only = 1;
 		}
-		else if (strcmp(argv[argn], "/debug") == 0)
+		else if ( matchArgument( argv[argn], "", "debug", show_usage ) == true )
 		{
 			debug = 2;
 		}
-		else if (strcmp(argv[argn], "/quiet") == 0)
+		else if ( matchArgument( argv[argn], "q", "quiet", show_usage ) == true )
 		{
 			debug = 0;
+		}
+		else if ( matchArgument( argv[argn], "v", "version", show_usage ) == true )
+		{
+			noExec = 1;
 		}
 		else
 		{
@@ -226,9 +289,19 @@ int main(int argc, char *argv[])
 
 		argn++; // Increment command line argument counter
 	}
+	
+}
+
+int main(int argc, char *argv[])
+{
+	// Parse arguments
+	parseArguments( argc, argv, false );
 
 	// Welcome message
 	WelcomeMsg( argv[0] );
+	
+	// __commentme__
+	if ( noExec == 1 ) exit(0);
 
 	// Debug messages
 	if (debug > 1) fprintf(stderr, "dev_number = %d\n", dev_number);

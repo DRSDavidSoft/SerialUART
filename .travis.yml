@@ -7,4 +7,4 @@ os:
   - linux
   - osx
 
-script: gcc -o main.elf main.c
+script: gcc -o SendCommand ./SendCommand.c && chmod +x ./SendCommand && SendCommand --version
