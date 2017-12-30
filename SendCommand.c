@@ -117,7 +117,8 @@ char* getProgramName( char* path ) {
 	}
 	
 	char *pch = strrchr(path, '/');
-	strcpy( result, pch + 1 );
+	if ( pch != NULL ) strcpy( result, pch + 1 );
+	else strcpy( result, path );
 	
 	return result;
 	
