@@ -51,6 +51,9 @@
 // https://github.com/wertarbyte/coreutils/blob/master/src/timeout.c
 
 /*
+### DO NOT USE THIS
+https://eklitzke.org/path-max-is-tricky
+https://insanecoding.blogspot.com/2007/11/pathmax-simply-isnt.html
 #ifdef MAX_PATH
 #define PATH_LENGTH MAX_PATH
 #elif defined PATH_MAX
