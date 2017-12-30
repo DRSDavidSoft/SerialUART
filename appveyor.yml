@@ -14,7 +14,7 @@ build_script:
 
     # Using GNU C Compiler (MinGW-compatible) on Windows
     - cmd: set MSYSTEM=MINGW64
-    - cmd: gcc -o SendCommandMinGW64.exe SendCommand.c
+    - cmd: gcc -v & gcc -o SendCommandMinGW64.exe SendCommand.c
 
     # Using Microsoft Visual Studio Compiler
     - cmd: call vcvars32.bat
