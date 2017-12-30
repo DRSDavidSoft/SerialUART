@@ -50,7 +50,7 @@
 #endif
 
 
-#if (defined OS_LINUX || defined OS_BSD || OS_UNIX)
+#if (defined OS_LINUX || defined OS_BSD || defined OS_UNIX)
 #define OS_POSIX
 #endif
 
