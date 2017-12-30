@@ -49,4 +49,9 @@
 #define OS_ANDROID
 #endif
 
+
+#if (defined OS_LINUX || defined OS_BSD || OS_UNIX)
+#define OS_POSIX
+#endif
+
 #endif

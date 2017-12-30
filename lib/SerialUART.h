@@ -33,7 +33,7 @@
 #include <windows.h>
 #endif
 
-#ifdef OS_LINUX
+#ifdef OS_POSIX
 #include <limits.h>   /* Used to derrive PATH_MAX length */
 #include <errno.h>    /* Error number definitions */
 #include <fcntl.h>    /* File control definitions */
