@@ -445,7 +445,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// TODO: Win32 API: how to read the serial, or exit within a timeout if wasn't a data
+	// TODO: Win32 API: how to read the serial, or exit within a timeout if there wasn't any data
 	// https://stackoverflow.com/a/25428844/1454514
 
 	if (true)

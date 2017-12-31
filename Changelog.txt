@@ -11,8 +11,19 @@ Website: www.Refoua.me
 
 Changelog:
 
+v1.3
+! now the port is selected with `/device` instead of `/devnum`
++ uniform arguments handling, now `--device` and `/device` are both supported
+* the communication section of the code is now being migrated to the `/lib` directory
+* set-up ci to build on Windows, Linux and OSX (however, POSIX-OSes are still not available)
+
+v1.2
++ added gcc support
++ add cli support
+* now can handle delays and timeouts
+
 v0.1
-  TBA
+  First version of the program; Serial on windows works
 
 v0.0
   Initial Beta Stage
