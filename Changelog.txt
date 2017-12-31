@@ -11,6 +11,10 @@ Website: www.Refoua.me
 
 Changelog:
 
+v2.0
+  TBA
+
+
 v1.3
 ! now the port is selected with `/device` instead of `/devnum`
 + uniform arguments handling, now `--device` and `/device` are both supported
