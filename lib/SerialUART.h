@@ -13,58 +13,34 @@
  * 
  */
 
-// ------------------------------------------------------------------
-// Include required OS-specific headers and libraries
-// ------------------------------------------------------------------
-//
-// NOTE: currently only Windows and Linux-based distros are supported.
-//       contact me to add support for more platforms.
-//
-
-#include "os_macros.h"   /* Detect which platform we're currently running on */
-
 #ifndef __SERIALUART_H__
 #define __SERIALUART_H__
 
+// Detect which platform we're currently running on
+#include "os_macros.h"
+
+// Include required OS-specific headers and libraries
 #ifdef OS_WIN
-// NOTE: used SDKDDKVer instead of WINVER to make it automatically defined on MinGW and Cygwin compilation.
-//#define WINVER 0x0500
+// Use SDKDDKVer instead of WINVER to make it automatically defined on MinGW and Cygwin compilation.
 #include <SDKDDKVer.h>
 #include <windows.h>
 #endif
 
 #ifdef OS_POSIX
-//#include <limits.h>   /* Used to derrive PATH_MAX length */
-#include <errno.h>    /* Error number definitions */
-#include <fcntl.h>    /* File control definitions */
-#include <termios.h>  /* POSIX terminal control definitions */
-#include <unistd.h>   /* UNIX standard function definitions */
+// Use POSIX terminal control definitions for Linux-based distros
+#include <errno.h>    // Error number definitions
+#include <fcntl.h>    // File control definitions
+#include <termios.h>  // POSIX terminal control definitions
+#include <unistd.h>   // UNIX standard function definitions
 #include <sys/ioctl.h>
-#error "Sorry, Linux is not supported in this version of SerialUART."
 #endif
 
-// Platform independent headers
-#include <stdio.h>    /* Standard input/output definitions */
-#include <string.h>   /* String function definitions */
-#include <stdlib.h>   /* */
-#include <stdbool.h>  /* */
-#include <time.h>     /* */
-
-// TODO: include defined from here, for example #define EXIT_TIMEDOUT 124
-// https://github.com/wertarbyte/coreutils/blob/master/src/timeout.c
-
-/*
-### DO NOT USE THIS
-https://eklitzke.org/path-max-is-tricky
-https://insanecoding.blogspot.com/2007/11/pathmax-simply-isnt.html
-#ifdef MAX_PATH
-#define PATH_LENGTH MAX_PATH
-#elif defined PATH_MAX
-#define PATH_LENGTH PATH_MAX
-#else
-#error "No `MAX_PATH` or `PATH_MAX` defined."
-#endif
-*/
+// Include standard C libraries and headers
+#include <stdio.h>    // Standard input/output definitions
+#include <string.h>   // String function definitions
+#include <stdlib.h>   // Standard library functions
+#include <stdbool.h>  // Boolean type and values
+#include <time.h>     // Time and date functions
 
 // Define C values
 #ifndef EXIT_SUCCESS // Return code for a successful operation
@@ -75,8 +51,15 @@ https://insanecoding.blogspot.com/2007/11/pathmax-simply-isnt.html
 #define EXIT_FAILURE 1
 #endif
 
-#ifndef EXIT_TIMEDOUT // Return code for timeout
-#define EXIT_TIMEDOUT 124
+// Define the maximum length of a file path using PATH_MAX macro if available
+#ifdef PATH_MAX
+#define PATH_LENGTH PATH_MAX
+#else
+#warning "No `PATH_MAX` defined. Using a default value of 4096."
+#define PATH_LENGTH 4096
 #endif
 
-#endif
+// TODO: include defined from here, for example #define EXIT_TIMEDOUT 124
+// https://github.com/wertarbyte/coreutils/blob/master/src/timeout.c
+
+#endif // __SERIALUART_H__
