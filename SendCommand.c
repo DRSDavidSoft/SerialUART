@@ -101,6 +101,19 @@ static int input_read(unsigned char *b,size_t cap,size_t *n) {
     *n=(size_t)got; return got?1:2;
 #endif
 }
+static int offline_terminal(int *escape) {
+    unsigned char b[256]; size_t n=0,i; int result=input_read(b,sizeof(b),&n);
+    if(result<0) return -1;
+    if(result==2) { stopping=1; return 0; }
+    for(i=0;i<n;++i) {
+        if(*escape) {
+            *escape=0;
+            if(b[i]=='q') stopping=1;
+            else if(b[i]=='?') fputs("\r\nWaiting for serial device; Ctrl+] q quits. Input while offline is discarded.\r\n",stderr);
+        } else if(b[i]==29) *escape=1;
+    }
+    return 0;
+}
 static void help(void) {
     puts("SerialUART " SUART_VERSION " | portable serial library and terminal\n"
          "Usage: SendCommand [selection] [configuration] [mode]\n\n"
@@ -229,6 +242,10 @@ int main(int argc,char **argv) {
         size_t n=0; uint64_t now=suart_millis();
         if(!port) {
             int result;
+            if(raw) {
+                if(offline_terminal(&escape)) { rc=1; break; }
+                if(stopping) break;
+            }
             if(now<retry) { suart_sleep(5); continue; }
             result=suart_resolve(&sel,&device);
             if(result==SUART_AMBIGUOUS || result==SUART_INVALID) {

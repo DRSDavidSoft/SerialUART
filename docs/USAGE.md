@@ -104,8 +104,9 @@ binary transfer checks. Select its configured 115200 baud and allow for startup.
 ## Reconnect and errors
 
 `--reconnect MS` retries initial absence and serial read/disconnect failures,
-re-running all selection filters before each open. Until connected, stdin is
-not consumed. There is no unbounded outgoing queue. An ambiguous selection stops
+re-running all selection filters before each open. Until connected, pipeline
+stdin is not consumed. In terminal mode, local quit/help shortcuts stay active
+and ordinary offline keystrokes are discarded. There is no unbounded outgoing queue. An ambiguous selection stops
 immediately. Completed commands and EOF sessions do not reopen and replay.
 Write errors stop with exit 1 because delivery is uncertain. A network peer
 disconnect leaves a listener available for the next peer; TCP client connection

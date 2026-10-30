@@ -342,6 +342,24 @@ class SerialPTY(unittest.TestCase):
             for fd in (master, slave, keyboard, console):
                 os.close(fd)
 
+    def test_terminal_quit_while_device_absent(self):
+        import pty
+        keyboard, console = pty.openpty()
+        with tempfile.TemporaryDirectory() as tmp:
+            p = subprocess.Popen(EMULATOR + [CLI, "-p", str(pathlib.Path(tmp) / "absent"), "--terminal", "--reconnect", "20"],
+                                 stdin=console, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            try:
+                self.assertIn(b"Ctrl+]", p.stderr.readline())
+                os.write(keyboard, b"\x1dq")
+                p.communicate(timeout=3)
+                self.assertEqual(p.returncode, 0)
+            finally:
+                if p.poll() is None:
+                    p.kill()
+                    p.communicate(timeout=3)
+                os.close(keyboard)
+                os.close(console)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
