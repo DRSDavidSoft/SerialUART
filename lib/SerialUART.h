@@ -14,16 +14,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define SUART_VERSION "2.1.0"
+#define SUART_VERSION "2.2.0"
 typedef struct suart_port suart_port;
 enum { SUART_OK=0, SUART_ERROR=-1, SUART_INVALID=-2, SUART_NOT_FOUND=-3,
        SUART_AMBIGUOUS=-4, SUART_UNSUPPORTED=-5, SUART_TIMEOUT=-6,
        SUART_BUFFER_FULL=-7 };
 typedef enum { SUART_DTR_KEEP, SUART_DTR_OFF, SUART_DTR_ON, SUART_DTR_RESET } suart_dtr;
+enum { SUART_STOP_ONE_POINT_FIVE=15 }; /* Windows, five data bits only. */
 typedef struct {
     unsigned baud, data_bits;
-    char parity; /* N, E, O */
-    unsigned stop_bits;
+    char parity; /* N, E, O; M/S on supported Windows/Linux drivers */
+    unsigned stop_bits; /* 1, 2, or SUART_STOP_ONE_POINT_FIVE */
     int rts_cts;
     suart_dtr dtr;
     unsigned boot_wait_ms;

@@ -158,10 +158,18 @@ int suart_open_ex(suart_port **out,const char *path,const suart_config *c,unsign
     if(!out) return SUART_INVALID;
     *out=NULL;
     if(!path || !*path || strlen(path)>=1000 || !c || !c->baud || c->data_bits<5 || c->data_bits>8 ||
-       !c->parity || !strchr("NEO",c->parity) || c->stop_bits<1 || c->stop_bits>2 ||
+       !c->parity || !strchr("NEOMS",c->parity) ||
+       (c->stop_bits!=1 && c->stop_bits!=2 && c->stop_bits!=SUART_STOP_ONE_POINT_FIVE) ||
+       (c->stop_bits==SUART_STOP_ONE_POINT_FIVE && c->data_bits!=5) ||
        c->dtr<SUART_DTR_KEEP || c->dtr>SUART_DTR_RESET || c->boot_wait_ms>60000) return SUART_INVALID;
 #if !defined(_WIN32) && !defined(__linux__)
     if(!speed(c->baud)) return SUART_UNSUPPORTED;
+#endif
+#ifndef _WIN32
+    if(c->stop_bits==SUART_STOP_ONE_POINT_FIVE) return SUART_UNSUPPORTED;
+#ifndef CMSPAR
+    if(c->parity=='M' || c->parity=='S') return SUART_UNSUPPORTED;
+#endif
 #endif
     p=(suart_port *)calloc(1,sizeof(*p));
     if(!p) {
@@ -186,8 +194,8 @@ int suart_open_ex(suart_port **out,const char *path,const suart_config *c,unsign
         memset(&d,0,sizeof(d)); d.DCBlength=sizeof(d);
         if(!GetCommState(p->fd,&d)) goto bad;
         d.BaudRate=c->baud; d.ByteSize=(BYTE)c->data_bits;
-        d.Parity=(BYTE)(c->parity=='N'?NOPARITY:c->parity=='E'?EVENPARITY:ODDPARITY);
-        d.StopBits=(BYTE)(c->stop_bits==1?ONESTOPBIT:TWOSTOPBITS);
+        d.Parity=(BYTE)(c->parity=='N'?NOPARITY:c->parity=='E'?EVENPARITY:c->parity=='O'?ODDPARITY:c->parity=='M'?MARKPARITY:SPACEPARITY);
+        d.StopBits=(BYTE)(c->stop_bits==1?ONESTOPBIT:c->stop_bits==2?TWOSTOPBITS:ONE5STOPBITS);
         d.fBinary=TRUE; d.fParity=c->parity!='N'; d.fOutxCtsFlow=c->rts_cts!=0;
         d.fOutxDsrFlow=FALSE; d.fDsrSensitivity=FALSE; d.fOutX=FALSE; d.fInX=FALSE;
         d.fNull=FALSE; d.fErrorChar=FALSE; d.fAbortOnError=FALSE;
@@ -230,7 +238,10 @@ int suart_open_ex(suart_port **out,const char *path,const suart_config *c,unsign
 #endif
         switch(c->data_bits) { case 5:t.c_cflag|=CS5;break;case 6:t.c_cflag|=CS6;break;case 7:t.c_cflag|=CS7;break;default:t.c_cflag|=CS8; }
         if(c->parity!='N') { t.c_cflag|=PARENB; t.c_iflag|=INPCK; }
-        if(c->parity=='O') t.c_cflag|=PARODD;
+        if(c->parity=='O' || c->parity=='M') t.c_cflag|=PARODD;
+#ifdef CMSPAR
+        if(c->parity=='M' || c->parity=='S') t.c_cflag|=CMSPAR;
+#endif
         if(c->stop_bits==2) t.c_cflag|=CSTOPB;
 #ifdef CRTSCTS
         t.c_cflag &= ~CRTSCTS; if(c->rts_cts) t.c_cflag|=CRTSCTS;
@@ -402,11 +413,10 @@ int suart_get_config(suart_port *p,suart_config *c) {
     {
         DCB d; memset(&d,0,sizeof(d)); d.DCBlength=sizeof(d);
         if(!GetCommState(p->fd,&d)) return fail(p);
-        if(d.Parity!=NOPARITY && d.Parity!=EVENPARITY && d.Parity!=ODDPARITY) return SUART_UNSUPPORTED;
-        if(d.StopBits!=ONESTOPBIT && d.StopBits!=TWOSTOPBITS) return SUART_UNSUPPORTED;
+        if(d.Parity>SPACEPARITY || d.StopBits>TWOSTOPBITS) return SUART_UNSUPPORTED;
         c->baud=d.BaudRate; c->data_bits=d.ByteSize;
-        c->parity=d.Parity==NOPARITY?'N':d.Parity==EVENPARITY?'E':'O';
-        c->stop_bits=d.StopBits==ONESTOPBIT?1:2; c->rts_cts=d.fOutxCtsFlow!=0;
+        c->parity=d.Parity==NOPARITY?'N':d.Parity==EVENPARITY?'E':d.Parity==ODDPARITY?'O':d.Parity==MARKPARITY?'M':'S';
+        c->stop_bits=d.StopBits==ONESTOPBIT?1:d.StopBits==TWOSTOPBITS?2:SUART_STOP_ONE_POINT_FIVE; c->rts_cts=d.fOutxCtsFlow!=0;
     }
 #else
     {
@@ -426,7 +436,7 @@ int suart_get_config(suart_port *p,suart_config *c) {
         switch(t.c_cflag&CSIZE) { case CS5:c->data_bits=5;break;case CS6:c->data_bits=6;break;case CS7:c->data_bits=7;break;default:c->data_bits=8; }
         c->parity=!(t.c_cflag&PARENB)?'N':(t.c_cflag&PARODD)?'O':'E';
 #ifdef CMSPAR
-        if((t.c_cflag&PARENB) && (t.c_cflag&CMSPAR)) return SUART_UNSUPPORTED;
+        if((t.c_cflag&PARENB) && (t.c_cflag&CMSPAR)) c->parity=(t.c_cflag&PARODD)?'M':'S';
 #endif
         c->stop_bits=(t.c_cflag&CSTOPB)?2:1;
 #ifdef CRTSCTS
