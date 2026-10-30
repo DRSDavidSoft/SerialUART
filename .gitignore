@@ -67,3 +67,8 @@ Temporary Items
 *.msi
 *.msm
 *.msp
+# CMake build and install trees
+/build*/
+/stage*/
+/dist/
+__pycache__/
