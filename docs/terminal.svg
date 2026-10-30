@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="390" viewBox="0 0 1000 390" role="img" aria-label="Illustrative SerialUART terminal session">
+<rect width="1000" height="390" rx="18" fill="#101827"/>
+<path d="M18 0h964q18 0 18 18v34H0V18Q0 0 18 0" fill="#203047"/>
+<circle cx="25" cy="26" r="6" fill="#fb7185"/><circle cx="47" cy="26" r="6" fill="#fbbf24"/><circle cx="69" cy="26" r="6" fill="#34d399"/>
+<g font-family="Consolas, Menlo, monospace" font-size="17" fill="#dbeafe">
+<text x="390" y="32" fill="#a8bdd4">SerialUART · SendCommand</text>
+<text x="28" y="91" fill="#67e8f9">$ SendCommand --list</text>
+<text x="28" y="125">/dev/ttyACM0   Arduino Uno   2341:0043   YOUR_SERIAL</text>
+<text x="28" y="179" fill="#67e8f9">$ SendCommand -p /dev/ttyACM0 -b 115200 --terminal --reconnect 1000</text>
+<text x="28" y="213" fill="#86efac">Connected /dev/ttyACM0 @ 115200 baud</text>
+<text x="28" y="247" fill="#a8bdd4">Ctrl+] then ?: help; q: quit; b: break; d: pulse DTR; ]: literal Ctrl+]</text>
+<text x="28" y="294">STATUS</text><text x="28" y="328" fill="#86efac">OK · ready</text>
+<text x="28" y="367" font-size="13" fill="#7891ad">Illustrative preview — device names and responses depend on your hardware.</text>
+</g></svg>

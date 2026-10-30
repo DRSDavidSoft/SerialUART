@@ -31,3 +31,14 @@ v0.1
 
 v0.0
   Initial Beta Stage
+v2.0.0
+======
+- Replace global Windows prototype with a C99 API and opaque independent handles.
+- Add Windows/POSIX configuration and byte-counted timed I/O, C++ linkage and shared builds.
+- Add OS-native device names and USB filters; reject ambiguous selection.
+- Add raw terminal, binary pipes, text/hex commands, DTR policy and serial reconnect.
+- Add optional TCP, RFC6455 WebSocket and bounded Socket.IO host adapters.
+- Add platform CI, PTY/socket/terminal/official-client tests, sanitizers and packages.
+- Add installable CMake targets, source manifests, checksums and attested draft releases.
+- Document migration and preserve physical hardware acceptance as separate evidence.
+
