@@ -140,8 +140,9 @@ releases are not overwritten. Packages receive GitHub build-provenance attestati
 Review the draft and publish it manually.
 No workflow flashes hardware or installs into a running user's system.
 
-AppVeyor remains a secondary MSVC compatibility check. The obsolete Travis
-configuration has been retired. Runtime code has no dependency downloader.
+GitHub Actions is the sole CI/CD provider. Its MSVC static/shared jobs cover
+Windows compatibility alongside the Linux, macOS and ARM jobs. Runtime code
+has no dependency downloader.
 
 ASan/UBSan runs exercise the protocol and serial tests. An optional CI-only
 Socket.IO 4.8.1 client verifies actual compatibility and a 46-second heartbeat

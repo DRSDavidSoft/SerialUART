@@ -1,9 +1,0 @@
-version: '2.0.{build}'
-image: Visual Studio 2022
-build_script:
-  - cmd: cmake -S . -B build-appveyor -A x64
-  - cmd: cmake --build build-appveyor --config Release --parallel 2
-test_script:
-  - cmd: ctest --test-dir build-appveyor -C Release --output-on-failure
-artifacts:
-  - path: build-appveyor\Release\SendCommand.exe
