@@ -74,15 +74,32 @@ jobs:
           cpack -C Release -G ZIP -B ../dist -D "CPACK_PACKAGE_FILE_NAME=SerialUART-$TARGET-$LINKAGE"
           cd ..
           python tools/checksums.py dist
-      - name: Verify GNU Make entry point
+      - name: Verify GNU Make and direct compiler entry points
         if: matrix.linkage == 'static' && (matrix.target == 'linux-x64-gcc' || matrix.target == 'macos-arm64-clang')
-        run: make test
+        shell: bash
+        run: |
+          make test
+          mkdir -p build-direct
+          sources=()
+          native=()
+          if [[ "$RUNNER_OS" == Linux ]]; then sources+=(lib/linux_native.c); fi
+          if [[ "$RUNNER_OS" == macOS ]]; then native+=(-framework IOKit -framework CoreFoundation); fi
+          cc -std=c99 -O2 -Wall -Wextra -Werror -Ilib -Iexamples -Icli SendCommand.c cli/*.c lib/SerialUART.c "${sources[@]}" examples/protocol.c examples/network.c "${native[@]}" -o build-direct/SendCommand
+          build-direct/SendCommand --version
       - name: Verify NMake entry point
         if: matrix.linkage == 'static' && matrix.target == 'windows-x64-msvc'
         shell: cmd
         run: |
           for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat" -arch=x64
           nmake /nologo /f Makefile.msvc test
+          if errorlevel 1 exit /b 1
+          if not exist build-direct mkdir build-direct
+          pushd build-direct
+          cl /nologo /std:c11 /utf-8 /O2 /I..\lib /I..\examples /I..\cli ..\SendCommand.c ..\cli\session.c ..\cli\options.c ..\cli\profiles.c ..\cli\devices.c ..\cli\keys.c ..\cli\windows_args.c ..\lib\SerialUART.c ..\examples\protocol.c ..\examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
+          if errorlevel 1 exit /b 1
+          SendCommand.exe --version
+          if errorlevel 1 exit /b 1
+          popd
       - name: Official Socket.IO client and heartbeat interoperability
         if: matrix.target == 'linux-x64-gcc' && matrix.linkage == 'static'
         shell: bash

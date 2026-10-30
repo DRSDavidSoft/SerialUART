@@ -35,10 +35,15 @@ int main(void) {
     subprocess.run([str(exe)], check=True, env=env)
     cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
     version = subprocess.check_output([str(cli), "--version"], env=env).strip()
-    if version != b"2.1.0":
+    if version != b"2.2.0":
         raise SystemExit("Installed executable version differs from expected package")
     manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
     if not manifest or "Source commit:" not in manifest[0].read_text():
         raise SystemExit("Package is missing source provenance")
     loopback = prefix / "bin" / ("SerialLoopback.exe" if os.name == "nt" else "SerialLoopback")
     subprocess.run([str(loopback), "--help"], check=True, env=env)
+    docs = prefix / "share/doc/SerialUART"
+    if "Edward Wright" not in (docs / "data/SIMPLYSERIAL-LICENSE.txt").read_text():
+        raise SystemExit("Imported board-data license is missing")
+    if not (docs / "examples/profiles/circuitpython.cfg").is_file():
+        raise SystemExit("Example terminal profile is missing")

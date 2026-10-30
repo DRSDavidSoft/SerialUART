@@ -1,5 +1,8 @@
 # Terminal, commands and pipelines
 
+For saved profiles, logs, board catalogs/filters, local echo and line editing,
+see the [SimplySerial feature guide](SIMPLYSERIAL.md).
+
 `SendCommand --help` is the complete option reference. Selection options combine:
 
 ```sh
@@ -89,6 +92,8 @@ keys to ANSI sequences. To send arbitrary non-UTF-8 bytes, use pipes/hex mode.
 | Ctrl+] then `b` | Send a 250 ms serial break |
 | Ctrl+] then `d` | Deassert DTR for 100 ms, then assert |
 | Ctrl+] then `m` | Show driver configuration and modem status |
+| Ctrl+] then `e` | Toggle local echo |
+| Ctrl+] then `c` | Clear the actual terminal screen |
 | Ctrl+] then `]` | Send a literal Ctrl+] byte |
 | Ctrl+C | Send byte 03 to the device in terminal mode |
 

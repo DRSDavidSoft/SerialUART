@@ -11,6 +11,19 @@ Website: www.Refoua.me
 
 Changelog:
 
+v2.2.0
+======
++ Port SimplySerial session features into native C host modules.
++ Add raw/display logs, append/overwrite, UTC timestamps and prompt flush/error reporting.
++ Add opt-in profiles, board recognition/custom aliases and include/exclude/block filters.
++ Add NONE/ONE/ANY auto-connect, busy-port fallback and pinned identity checks.
++ Add echo, binary Enter mappings, bounded UTF-8 line editing, bulk input and exit controls.
++ Add streaming OSC title filtering, terminal title/clear controls and expanded Windows keys.
+* Correct Windows non-BMP keyboard encoding and retain repeated console key events.
++ Add supported mark/space parity and Windows 5-bit/1.5-stop-bit configuration.
++ Retain SimplySerial board-data MIT notice, offline source snapshot and deterministic importer.
++ Extend session, device-policy, PTY, packaging and direct-compiler validation.
+
 v2.1.0
 ======
 + Apply the historical serial reference audit; preserve a source-by-source ledger.

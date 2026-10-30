@@ -25,6 +25,14 @@ Run `ctest --test-dir build -C Release --output-on-failure` after building.
   peer timeout; delimiter deadlines under continuous unterminated input.
 - GNU Make entry point on Linux/macOS and NMake entry point on Windows.
 - macOS blocked PTY TX queue deadline while incoming RX remains serviced.
+- Native session display/log tests with every escape/UTF-8 sequence split into
+  individual feeds; exact raw capture, append/overwrite, timestamps and live flush.
+- UTF-8 profile/log paths, layered settings and CLI precedence, forbidden profile
+  actions/nesting, malformed files and argument text that resembles an option.
+- Board catalog regeneration, compound include/exclude/block rules, custom model
+  names, simulated busy ports, ONE identity renumbering and ambiguous identities.
+- Real POSIX terminal line editing/local echo/custom binary Enter/exit-key tests;
+  platform-independent Windows UTF-16 and navigation/function-key encoder tests.
 
 Python's standard library drives integration tests. Windows skips PTY-specific
 tests and runs the real socket tests. No test opens arbitrary physical COM ports.
@@ -54,6 +62,12 @@ model/firmware and observed result. Keep this checklist open until measured:
   record counts, mismatch totals and available driver error deltas.
 - [ ] Verify nonstandard baud on a scope/analyzer; driver readback alone is
   not an independent baud-frequency measurement.
+- [ ] Verify CircuitPython Ctrl+C/Ctrl+D, actual Windows paste/key-repeat/IME
+  input, title restore, and large terminal pastes against the intended firmware.
+- [ ] Verify mark/space parity on a supporting adapter and Windows 5-bit/1.5-stop
+  framing with an analyzer; POSIX PTYs cannot provide that evidence.
+- [ ] Unplug/replug an entire multi-port hub while multiple sessions run; confirm
+  configured filters and ONE/ANY identity rules, and inspect the raw captures.
 
 Build, package and virtual serial success do not close electrical/reset/driver,
 physical Pi, Windows serial-device or human terminal acceptance items.
