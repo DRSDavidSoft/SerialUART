@@ -7,8 +7,8 @@
 <text x="28" y="91" fill="#67e8f9">$ SendCommand --list</text>
 <text x="28" y="125">/dev/ttyACM0   Arduino Uno   2341:0043   YOUR_SERIAL</text>
 <text x="28" y="179" fill="#67e8f9">$ SendCommand -p /dev/ttyACM0 -b 115200 --terminal --reconnect 1000</text>
-<text x="28" y="213" fill="#86efac">Connected /dev/ttyACM0 @ 115200 baud</text>
-<text x="28" y="247" fill="#a8bdd4">Ctrl+] then ?: help; q: quit; b: break; d: pulse DTR; ]: literal Ctrl+]</text>
+<text x="28" y="213" fill="#a8bdd4">Ctrl+] q quit · b break · d DTR reset · m modem/config · ] literal Ctrl+]</text>
+<text x="28" y="247" fill="#86efac">Connected /dev/ttyACM0 @ 115200 baud</text>
 <text x="28" y="294">STATUS</text><text x="28" y="328" fill="#86efac">OK · ready</text>
 <text x="28" y="367" font-size="13" fill="#7891ad">Illustrative preview — device names and responses depend on your hardware.</text>
 </g></svg>

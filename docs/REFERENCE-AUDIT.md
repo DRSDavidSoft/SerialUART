@@ -30,7 +30,7 @@ timing, USB metadata, UART clock accuracy, electrical wiring, or a hardware soak
 
 1. [DisablingAutoResetOnSerialConnection](https://playground.arduino.cc/Main/DisablingAutoResetOnSerialConnection)
    — **Unavailable.** Used the current [Arduino platform specification](https://docs.arduino.cc/arduino-cli/platform-specification#1200-bps-bootloader-reset)
-   and [UNO R3 hardware resources](https://docs.arduino.cc/hardware/uno-rev3/)
+   and [UNO R3 reset-enable schematic](https://docs.arduino.cc/resources/schematics/A000066-schematics.pdf)
    as replacements. DTR assertion is a logical signal, not a universal voltage.
    `keep`/`off` cannot undo an initial driver pulse. Native USB 1200-bps bootloader
    touch is a separate mechanism; `--dtr reset` does not implement it.
