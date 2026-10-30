@@ -276,8 +276,13 @@ class SerialPTY(unittest.TestCase):
             os.write(master, b"OK\x00\xff")
             out, err = p.communicate(timeout=5)
             self.assertEqual((p.returncode, out), (0, b"OK\x00\xff"), err)
-            p = subprocess.run(EMULATOR + [CLI, "-p", os.ttyname(slave), "-s", "X", "--timeout", "20", "-q"], capture_output=True, timeout=5)
-            self.assertEqual(p.returncode, 124)
+            p = subprocess.Popen(EMULATOR + [CLI, "-p", os.ttyname(slave), "-s", "X", "--timeout", "20", "-q"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            # Drain TX while withholding a reply. On macOS a PTY's output
+            # queue remains nonempty until its master actually consumes it.
+            self.assertTrue(select.select([master], [], [], 3)[0])
+            self.assertEqual(os.read(master, 1), b"X")
+            out, err = p.communicate(timeout=5)
+            self.assertEqual(p.returncode, 124, err)
         finally:
             os.close(master)
             os.close(slave)

@@ -159,7 +159,7 @@ static void help(void) {
          "  -b, --baud RATE            Baud rate\n"
          "  --data-bits 5..8 --parity N|E|O --stop-bits 1|2\n"
          "  --rts-cts                 Hardware flow control\n"
-         "  --dtr keep|off|on|reset    Reset pulses low 100ms then high\n"
+         "  --dtr keep|off|on|reset    Reset deasserts 100ms then asserts DTR\n"
          "  --boot-wait MS            Wait after every successful open (0..60000)\n\n"
          "Modes (default: binary stdin -> serial -> stdout):\n"
          "  -s, --send TEXT            Send text, receive until idle timeout\n"
@@ -294,7 +294,7 @@ int main(int argc,char **argv) {
         if(!net) { fputs("Cannot open network adapter\n",stderr); rc=1; goto done; }
         if(!quiet) fprintf(stderr,"%s %s %s:%u\n",client?"Connecting":"Listening",mode,host,net_port);
     }
-    if(raw && !quiet) fputs("Ctrl+] then ?: help; q: quit; b: break; d: pulse DTR; ]: literal Ctrl+]\n",stderr);
+    if(raw && !quiet) fputs("Ctrl+] then ?: help; q: quit; b: break; d: pulse DTR; m: modem/config; ]: literal Ctrl+]\n",stderr);
     while(!stopping) {
         size_t n=0; uint64_t now=suart_millis();
         if(!port) {
@@ -367,7 +367,7 @@ int main(int argc,char **argv) {
                 if(escape) {
                     escape=0;
                     if(ch=='q') { stopping=1; break; }
-                    if(ch=='?') fputs("\r\nCtrl+] q quit | b break | d DTR reset | ] literal escape\r\n",stderr);
+                    if(ch=='?') fputs("\r\nCtrl+] q quit | b break | d DTR reset | m modem/config | ] literal escape\r\n",stderr);
                     else if(ch=='m') show_config(port);
                     else if(ch=='b') { if(suart_send_break(port,250)) rc=1; }
                     else if(ch=='d') {

@@ -14,7 +14,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define SUART_VERSION "2.0.0"
+#define SUART_VERSION "2.1.0"
 typedef struct suart_port suart_port;
 enum { SUART_OK=0, SUART_ERROR=-1, SUART_INVALID=-2, SUART_NOT_FOUND=-3,
        SUART_AMBIGUOUS=-4, SUART_UNSUPPORTED=-5, SUART_TIMEOUT=-6 };

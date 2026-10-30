@@ -29,7 +29,7 @@ class Release(unittest.TestCase):
                 archive.with_suffix(".zip.sha256").write_text(f"{digest}  {archive.name}\n")
                 archives.append(archive)
 
-            def run(output, tag="v2.0.0"):
+            def run(output, tag="v2.1.0"):
                 return subprocess.run([sys.executable, str(ROOT / "tools/release.py"), str(incoming), str(tmp / output), tag], cwd=ROOT, capture_output=True)
 
             self.assertNotEqual(run("bad-tag", "v0.0.0").returncode, 0)

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(SerialUART VERSION 2.0.0 LANGUAGES C)
+project(SerialUART VERSION 2.1.0 LANGUAGES C)
 if(APPLE)
   set(CMAKE_INSTALL_RPATH "@loader_path/../lib")
 elseif(UNIX)
