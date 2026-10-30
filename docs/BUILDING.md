@@ -7,6 +7,9 @@
 - Native SDK headers/libraries supplied by the OS/compiler.
 - Python 3 for integration/package tooling only. No pip packages are needed.
 
+Use `-DBUILD_TESTING=OFF` for a C-only production build without a C++ compiler or
+Python. Both the library and executable are written entirely in C.
+
 ## Windows
 
 From a Visual Studio developer terminal:
@@ -123,21 +126,26 @@ network adapters are optional and introduce no serial library dependency.
 
 ## CI/CD
 
-[GitHub Actions](../.github/workflows/build.yml) builds and tests ten native
+[GitHub Actions](https://github.com/DRSDavidSoft/SerialUART/blob/master/.github/workflows/build.yml) builds and tests ten native
 combinations (five compiler/platform targets × static/shared), plus ARMv7/QEMU.
 Every native build installs to a staging prefix and builds a separate CMake
 consumer against it. Packages include the executable, library/import library,
-public header, CMake config, guides and host adapter sources. Each ZIP has a
+public header, CMake config, source/compiler manifest, guides and host adapter sources. Each ZIP has a
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
 required branch check. Tag `v2.0.0` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
-releases are not overwritten. Review the draft and publish it manually.
+releases are not overwritten. Packages receive GitHub build-provenance attestations.
+Review the draft and publish it manually.
 No workflow flashes hardware or installs into a running user's system.
 
 AppVeyor remains a secondary MSVC compatibility check. The obsolete Travis
 configuration has been retired. Runtime code has no dependency downloader.
+
+ASan/UBSan runs exercise the protocol and serial tests. An optional CI-only
+Socket.IO 4.8.1 client verifies actual compatibility and a 46-second heartbeat
+session; npm dependencies are test tooling and are not linked or shipped.
 
 Verify a downloaded package with `sha256sum -c SHA256SUMS` on Linux or
 `Get-FileHash package.zip -Algorithm SHA256` on PowerShell. Extract it and add

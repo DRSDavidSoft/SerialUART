@@ -163,11 +163,11 @@ jobs:
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: python3 tools/release.py incoming release "$RELEASE_TAG"
+      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
+        with:
+          subject-path: release/*.zip
       - name: Create immutable draft
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
         run: gh release create "$RELEASE_TAG" release/* --verify-tag --draft --generate-notes
-      - uses: actions/attest-build-provenance@43d14bc2b83dec42d39ecae14e916627a18bb661 # v3
-        with:
-          subject-path: release/*.zip

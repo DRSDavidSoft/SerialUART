@@ -23,3 +23,10 @@ target_link_libraries(consumer PRIVATE SerialUART::serialuart)
     if not exe.exists():
         exe = root / "build" / "consumer.exe"
     subprocess.run([str(exe)], check=True, env=env)
+    cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
+    version = subprocess.check_output([str(cli), "--version"], env=env).strip()
+    if version != b"2.0.0":
+        raise SystemExit("Installed executable version differs from expected package")
+    manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
+    if not manifest or "Source commit:" not in manifest[0].read_text():
+        raise SystemExit("Package is missing source provenance")

@@ -12,6 +12,9 @@ Run `ctest --test-dir build -C Release --output-on-failure` after building.
 - Browser Origin rejection and explicit allowlisting.
 - POSIX PTY binary pipelines, text/hex command replies, timeout exit and serial
   reconnect through a changed device symlink.
+- Real CLI TCP/WS/Socket.IO-to-PTY bridges and TCP client mode.
+- Terminal prefix shortcuts, literal Ctrl+C and input-state restoration on POSIX.
+- Official Socket.IO 4.8.1 client binary exchange and 46-second heartbeat session.
 - Installed CMake consumer compilation/link/execution, per native platform.
 - ARMv7 cross-compiled binaries execute under QEMU; this is emulation evidence.
 
@@ -33,7 +36,7 @@ model/firmware and observed result. Keep this checklist open until measured:
 - [ ] Unplug/replug resumes with stable identity; an unrelated board is never selected.
 - [ ] Terminal shortcuts and restored console verified in Windows Terminal and POSIX terminal.
 - [ ] Physical Raspberry Pi GPIO UART and USB serial verified separately.
-- [ ] Socket.IO official client heartbeat survives >45 seconds and reconnects after peer loss.
+- [ ] Network bridge reconnects after peer loss while the real serial device stays open.
 - [ ] Long transfer/soak with slow consumers and physical flow control checked for loss.
 
 Build, package and virtual serial success do not close electrical/reset/driver,

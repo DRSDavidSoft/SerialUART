@@ -10,8 +10,11 @@ version = re.search(r'project\(SerialUART VERSION (\d+\.\d+\.\d+)', pathlib.Path
 if sys.argv[3] != "v" + version:
     raise SystemExit("Tag and source version disagree")
 archives = sorted(incoming.glob("*/*.zip"))
-if len(archives) != 11:
-    raise SystemExit(f"Expected 11 packages, got {len(archives)}")
+targets = ["linux-x64-gcc", "linux-x64-clang", "linux-arm64-gcc", "macos-arm64-clang", "windows-x64-msvc"]
+expected_names = {f"SerialUART-{target}-{linkage}.zip" for target in targets for linkage in ("static", "shared")}
+expected_names.add("SerialUART-linux-armv7-gcc-static.zip")
+if len(archives) != 11 or {a.name for a in archives} != expected_names:
+    raise SystemExit("Release must contain the complete expected platform/linkage package set")
 output.mkdir()
 lines = []
 for archive in archives:
