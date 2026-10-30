@@ -17,6 +17,7 @@ typedef SOCKET socket_t;
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 #include <netdb.h>
 typedef int socket_t;
 #define BAD (-1)

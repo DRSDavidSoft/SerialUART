@@ -1,25 +1,9 @@
-version: '{build}'
-configuration: Release
-os: unstable
-
-platform:
-    - x86
-    - x64
-
+version: '2.0.{build}'
+image: Visual Studio 2022
 build_script:
-
-    # Add required directories to path
-    - cmd: set PATH=%PATH%;C:\MinGW\bin
-    - cmd: set PATH=%PATH%;C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\bin
-
-    # Using GNU C Compiler (MinGW-compatible) on Windows
-    - cmd: set MSYSTEM=MINGW64
-    - cmd: gcc -v & gcc -o SendCommandMinGW64.exe SendCommand.c
-
-    # Using Microsoft Visual Studio Compiler
-    - cmd: call vcvars32.bat
-    - cmd: cl.exe SendCommand.c
-
-    # Now check both binaries
-    - cmd: SendCommandMinGW64.exe --version
-    - cmd: SendCommand.exe --version
+  - cmd: cmake -S . -B build-appveyor -A x64
+  - cmd: cmake --build build-appveyor --config Release --parallel 2
+test_script:
+  - cmd: ctest --test-dir build-appveyor -C Release --output-on-failure
+artifacts:
+  - path: build-appveyor\Release\SendCommand.exe

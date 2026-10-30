@@ -1,4 +1,5 @@
 #define _DEFAULT_SOURCE
+#define _DARWIN_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include "SerialUART.h"
 #include <stdlib.h>
@@ -301,7 +302,8 @@ int suart_enumerate(suart_device_fn cb,void *ctx) {
 #else
 #ifdef __linux__
 static void filetext(const char *dir,const char *key,char *out,size_t n) {
-    char path[2048]; FILE *f; snprintf(path,sizeof(path),"%s/%s",dir,key);
+    char path[PATH_MAX+64]; FILE *f;
+    if(snprintf(path,sizeof(path),"%s/%s",dir,key)>=(int)sizeof(path)) return;
     f=fopen(path,"r"); if(!f) return;
     if(fgets(out,(int)n,f)) out[strcspn(out,"\r\n")]=0;
     fclose(f);

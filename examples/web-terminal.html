@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SerialUART · WebSocket console</title>
+<style>
+body{margin:0;background:#101827;color:#dbeafe;font:16px system-ui}main{max-width:900px;margin:5vh auto;padding:24px}h1{letter-spacing:-1px}p{color:#a8bdd4}input,button{font:inherit;padding:12px;border-radius:8px;border:1px solid #435673;background:#203047;color:inherit}input{flex:1;min-width:0}button{cursor:pointer}button:disabled{opacity:.5;cursor:default}.row{display:flex;gap:12px;margin:16px 0}pre{height:45vh;overflow:auto;background:#080f1c;padding:20px;border-radius:12px;white-space:pre-wrap;overflow-wrap:anywhere}#status{color:#67e8f9}label{display:block}
+</style>
+<main><h1>SerialUART <span style="color:#67e8f9">/ byte console</span></h1>
+<p>Connect to your local SendCommand WebSocket adapter. The server must allow this page's exact Origin. Received bytes are shown in hex and decoded text.</p>
+<label for="url">WebSocket address</label><div class="row"><input id="url" value="ws://127.0.0.1:8765/serial"><button id="connect">Connect</button></div>
+<p id="status" role="status">Disconnected</p><pre id="output" aria-label="Received serial data"></pre>
+<form id="send"><label for="text">Send UTF-8 text (no automatic newline)</label><div class="row"><input id="text" placeholder="STATUS"><button id="submit" disabled>Send</button></div></form>
+</main><script>
+let socket; const el=id=>document.getElementById(id);
+const status=text=>{el('status').textContent=text;};
+el('connect').onclick=()=>{
+  if(socket){socket.close();return;}
+  try{socket=new WebSocket(el('url').value);}catch(error){status(error.message);return;}
+  socket.binaryType='arraybuffer';status('Connecting…');el('connect').textContent='Disconnect';
+  socket.onopen=()=>{status('Connected');el('submit').disabled=false;};
+  socket.onclose=()=>{socket=null;status('Disconnected');el('submit').disabled=true;el('connect').textContent='Connect';};
+  socket.onerror=()=>status('Connection failed — check adapter address and allowed Origin');
+  socket.onmessage=event=>{
+    const bytes=new Uint8Array(event.data),hex=Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join(' ');
+    const out=el('output');out.textContent+=(hex+'\n'+new TextDecoder().decode(bytes)+'\n');
+    if(out.textContent.length>100000)out.textContent=out.textContent.slice(-80000);
+    out.scrollTop=out.scrollHeight;
+  };
+};
+el('send').onsubmit=event=>{event.preventDefault();if(socket?.readyState===WebSocket.OPEN){socket.send(new TextEncoder().encode(el('text').value));el('text').value='';}};
+</script></html>
