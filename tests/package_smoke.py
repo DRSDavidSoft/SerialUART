@@ -42,3 +42,8 @@ int main(void) {
         raise SystemExit("Package is missing source provenance")
     loopback = prefix / "bin" / ("SerialLoopback.exe" if os.name == "nt" else "SerialLoopback")
     subprocess.run([str(loopback), "--help"], check=True, env=env)
+    docs = prefix / "share/doc/SerialUART"
+    if "Edward Wright" not in (docs / "data/SIMPLYSERIAL-LICENSE.txt").read_text():
+        raise SystemExit("Imported board-data license is missing")
+    if not (docs / "examples/profiles/circuitpython.cfg").is_file():
+        raise SystemExit("Example terminal profile is missing")

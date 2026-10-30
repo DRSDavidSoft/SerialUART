@@ -5,7 +5,7 @@
 typedef struct { int kind; unsigned present,loose; char value[6][512]; } sc_rule;
 typedef struct { unsigned vid,pid; char name[512]; } sc_alias;
 typedef struct {
-    int display,force_newline,no_status,echo,line_buffer,bulk,exit_key,clear_screen;
+    int display,force_newline,no_status,echo,line_buffer,bulk,exit_key,clear_screen,input_cr,prefer_boards;
     int auto_connect,list_kind,log_append,log_display,log_time,pinned;
     const char *log_path,*title,*board_name;
     unsigned char enter[256],line[4096]; size_t enter_size,line_size;

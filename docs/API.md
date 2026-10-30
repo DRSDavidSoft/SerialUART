@@ -63,6 +63,17 @@ native error after cleanup. The original `suart_open` API remains available.
 Invalid library arguments leave `native_error` zero. The existing configuration
 struct layout and major library ABI are unchanged in 2.1.
 
+Version 2.2 also accepts `parity='M'` (mark) and `'S'` (space) on supported
+Windows/Linux drivers. Unsupported native modes return UNSUPPORTED before open.
+`stop_bits=SUART_STOP_ONE_POINT_FIVE` (integer 15) requests 1.5 stop bits on
+Windows with five data bits; other data widths are INVALID and POSIX returns
+UNSUPPORTED. The existing field layout remains unchanged. Driver acceptance
+and readback do not replace a physical framing/timing measurement.
+
+Profiles, logs, rendering, board aliases, automatic selection policy and terminal
+editing belong to the executable's host modules. They do not change library
+read/write bytes or add a dependency to the C ABI.
+
 ## Queues, framing and diagnostics
 
 | API | Meaning |

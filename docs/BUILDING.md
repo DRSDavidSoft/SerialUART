@@ -132,19 +132,19 @@ Build-tree consumers can use `add_subdirectory(SerialUART)` and the same target.
 Linux:
 
 ```sh
-cc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
+cc -std=c99 -O2 -Ilib -Iexamples -Icli SendCommand.c cli/*.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
 ```
 
 MinGW-w64:
 
 ```sh
-gcc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lws2_32 -lshell32 -o SendCommand.exe
+gcc -std=c99 -O2 -Ilib -Iexamples -Icli SendCommand.c cli/*.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lws2_32 -lshell32 -o SendCommand.exe
 ```
 
 MSVC developer terminal:
 
 ```bat
-cl /nologo /std:c11 /O2 /Ilib /Iexamples SendCommand.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
+cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli SendCommand.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
 ```
 
 For macOS omit `lib/linux_native.c` and append
@@ -170,7 +170,7 @@ public header, `SerialLoopback`, CMake config, source/compiler manifest, guides 
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
-required branch check. Tag `v2.1.0` (matching the source version) to run the same
+required branch check. Tag `v2.2.0` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
 releases are not overwritten. Packages receive GitHub build-provenance attestations.
 Review the draft and publish it manually.
@@ -179,6 +179,11 @@ No workflow flashes hardware or installs into a running user's system.
 GitHub Actions is the sole CI/CD provider. Its MSVC static/shared jobs cover
 Windows compatibility alongside the Linux, macOS and ARM jobs. Runtime code
 has no dependency downloader.
+
+Packages include the offline board snapshot and its MIT notice, plus example
+terminal/AT-command profiles. Board recognition is compiled in; catalog refresh
+uses the optional maintenance tool described in [the feature guide](SIMPLYSERIAL.md).
+GNU Make/NMake and direct compiler paths are checked alongside CMake builds.
 
 ASan/UBSan runs exercise the protocol and serial tests. An optional CI-only
 Socket.IO 4.8.1 client verifies actual compatibility and a 46-second heartbeat

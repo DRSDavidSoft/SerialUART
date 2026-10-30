@@ -23,6 +23,13 @@ int main(int argc,char **argv) {
     c.data_bits=9; error=123;
     CHECK(suart_open_ex(&p,argv[1],&c,&error)==SUART_INVALID && !p && !error);
     suart_config_init(&c);
+    c.data_bits=5; c.stop_bits=SUART_STOP_ONE_POINT_FIVE;
+    CHECK(suart_open_ex(&p,argv[1],&c,&error)==SUART_UNSUPPORTED && !p && !error);
+#ifdef __APPLE__
+    suart_config_init(&c); c.parity='M';
+    CHECK(suart_open_ex(&p,argv[1],&c,&error)==SUART_UNSUPPORTED && !p && !error);
+#endif
+    suart_config_init(&c);
     CHECK(!suart_open_ex(&p,argv[1],&c,&error) && !error);
     CHECK(!suart_get_config(p,&actual));
     CHECK(actual.baud==57600 && actual.data_bits==8 && actual.parity=='N' && actual.stop_bits==1);

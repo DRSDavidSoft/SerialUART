@@ -32,6 +32,7 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 | Build packages and draft releases | [CI/CD and validation](docs/BUILDING.md#cicd) |
 | Test a loopback or byte-exact echo device | [Counting-pattern integrity test](docs/USAGE.md#counting-pattern-loopback) |
 | See how the historical references shaped the implementation | [Source-by-source audit](docs/REFERENCE-AUDIT.md) |
+| SimplySerial-style profiles, logs, board filters and terminal editing | [Feature guide and compatibility](docs/SIMPLYSERIAL.md) |
 
 ## Capabilities
 
@@ -50,6 +51,10 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
   one-shot text and hex commands with configurable reply timeout.
 - LF-terminated commands, binary delimiter reads with total deadlines, and an
   independent counting-pattern loopback tool with corruption detection.
+- Native session logs, optional display/status transforms, local echo, custom
+  Enter bytes, line editing and efficient console paste; opt-in profile layers.
+- Offline recognition for 472 board models, custom aliases, include/exclude/block
+  rules, and ONE/ANY automatic connection with busy-port handling and identity pins.
 - Optional one-peer TCP, WebSocket and Socket.IO bridge examples, built into
   the CLI. Network code is separate from the serial library.
 
@@ -98,3 +103,5 @@ The old `.c` inclusion and global variables have been removed; see
 Created by **David Refoua**. Historical acknowledgements are preserved in
 [CONTRIBUTORS.md](CONTRIBUTORS.md). The historical repository did not specify a
 project-wide license; this update does not silently assign new licensing terms.
+Imported SimplySerial board data retains its separate
+[MIT notice](data/SIMPLYSERIAL-LICENSE.txt).

@@ -26,7 +26,7 @@ static int allowed(const char *s) {
         "--rts-cts","--dtr","--boot-wait","--timeout","--write-timeout","--reconnect","--terminal","--receive","--quiet",
         "--discard-input","--show-config","--log","--log-mode","--log-format","--log-time","--display","--force-newline",
         "--status","--title","--clear-screen","--echo","--line-buffer","--bulk-send","--exit-key","--enter","--enter-hex",
-        "--autoconnect","--include","--exclude","--block","--board","--board-name"};
+        "--autoconnect","--include","--exclude","--block","--board","--board-name","--prefer-boards"};
     size_t i; for(i=0;i<sizeof(keys)/sizeof(keys[0]);++i) if(!strcmp(s,keys[i])) return 1;
     return 0;
 }
@@ -48,7 +48,7 @@ static int load(const char *path,int optional) {
         if(current>1048576 || (current>=previous && previous>=0 && (unsigned long)(current-previous)>strlen(line))) goto bad;
         previous=current;
         if(!strchr(line,'\n') && !feof(f)) goto bad;
-        s=trim(line); if(number==1 && !strncmp(s,"\xEF\xBB\xBF",3)) s+=3;
+        s=trim(line); if(number==1 && !strncmp(s,"\xEF\xBB\xBF",3)) s=trim(s+3);
         if(!*s || *s=='#') continue;
         for(p=s;*p && *p!='=' && !isspace((unsigned char)*p);++p) {}
         if(*p) { *p++=0; v=trim(p); n=strlen(v);

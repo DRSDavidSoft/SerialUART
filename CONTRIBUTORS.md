@@ -1,5 +1,9 @@
 ## SerialUART Contributors
 
+Edward Wright ([fasteddy516/SimplySerial](https://github.com/fasteddy516/SimplySerial)):
+terminal/session feature reference and the imported board-recognition snapshot.
+The board data's [MIT notice](data/SIMPLYSERIAL-LICENSE.txt) is retained separately.
+
 This project wouldn't have been able to be made without the help of many open-source contributors. Here's an (incomplete) list of people who helped make this project possible:
 
 * **Cliff Brake <cbrake@bec-systems.com>**: Added support for Linux-based distros

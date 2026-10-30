@@ -96,16 +96,17 @@ static int candidate(const suart_device *d,void *ctx) {
     if(c->count==256) { c->overflow=1; return 1; }
     c->devices[c->count++]=*d; return 0;
 }
-static int score(const suart_device *d) {
+static int score(const sc_session *s,const suart_device *d) {
     size_t i;
+    if(!s->prefer_boards) return 0;
     if(contains(d->name,"CircuitPython")) return 2;
+    for(i=0;i<s->alias_count;++i) if(s->aliases[i].vid==d->vid && s->aliases[i].pid==d->pid) return 1;
     for(i=0;i<sizeof(board_data)/sizeof(board_data[0]);++i)
         if(board_data[i].vid==d->vid && board_data[i].pid==d->pid) return 1;
     return 0;
 }
-static int compare_device(const void *a,const void *b) {
-    const suart_device *aa=(const suart_device *)a,*bb=(const suart_device *)b;
-    int sa=score(aa),sb=score(bb); if(sa!=sb) return sb-sa;
+static int compare_device(const sc_session *s,const suart_device *aa,const suart_device *bb) {
+    int sa=score(s,aa),sb=score(s,bb); if(sa!=sb) return sb-sa;
 #ifdef _WIN32
     if(!_strnicmp(aa->path,"COM",3) && !_strnicmp(bb->path,"COM",3)) {
         int n=atoi(aa->path+3)-atoi(bb->path+3); if(n) return n;
@@ -117,6 +118,7 @@ int sc_open(sc_session *s,const suart_selector *sel,const suart_config *config,s
     suart_selector pinned={0}; scan c; int rc; size_t i;
     *port=NULL; *error=0;
     if(s->pinned && s->auto_connect==1) {
+        pinned=*sel;
         if(s->identity.serial[0]) { pinned.serial=s->identity.serial; pinned.vid=s->identity.vid; pinned.pid=s->identity.pid; }
         else { pinned.path=s->identity.path; pinned.vid=s->identity.vid; pinned.pid=s->identity.pid; }
         sel=&pinned;
@@ -130,6 +132,7 @@ int sc_open(sc_session *s,const suart_selector *sel,const suart_config *config,s
             rc=suart_enumerate(candidate,&c);
             if(!rc && c.count==1) *device=c.devices[0];
             free(c.devices);
+            if(rc && s->rule_count) return rc;
         }
         if(sc_device_state(s,device)==2) return SUART_INVALID;
         return suart_open_ex(port,device->path,config,error);
@@ -150,7 +153,11 @@ int sc_open(sc_session *s,const suart_selector *sel,const suart_config *config,s
     if(!rc && !c.count) rc=SUART_NOT_FOUND;
     if(!rc && (!s->auto_connect || s->pinned) && c.count>1) rc=SUART_AMBIGUOUS;
     if(!rc) {
-        qsort(c.devices,c.count,sizeof(*c.devices),compare_device);
+        for(i=1;i<c.count;++i) {
+            suart_device item=c.devices[i]; size_t j=i;
+            while(j && compare_device(s,&item,&c.devices[j-1])<0) { c.devices[j]=c.devices[j-1]; --j; }
+            c.devices[j]=item;
+        }
         rc=SUART_NOT_FOUND;
         for(i=0;i<c.count;++i) {
             *device=c.devices[i]; rc=suart_open_ex(port,device->path,config,error);

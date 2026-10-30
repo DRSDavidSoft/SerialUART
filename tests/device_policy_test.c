@@ -18,7 +18,7 @@ int suart_open_ex(suart_port **p,const char *path,const suart_config *c,unsigned
 static void setup(void) {
     memset(devices,0,sizeof(devices)); count=2;
     strcpy(devices[0].path,"port-A"); strcpy(devices[1].path,"port-B");
-    devices[0].vid=devices[1].vid=0x2e8a; devices[0].pid=devices[1].pid=0x0005;
+    devices[0].vid=devices[1].vid=0x2e8a; devices[0].pid=devices[1].pid=0x000b;
     strcpy(devices[0].serial,"SERIAL-A"); strcpy(devices[1].serial,"SERIAL-B");
     strcpy(devices[0].name,"Fixture device"); strcpy(devices[1].name,"Fixture device");
 }
@@ -42,5 +42,19 @@ int main(void) {
     setup(); sc_init(&s);
     CHECK(sc_option(&s,"--block","name~fixture")==1);
     CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_INVALID && !p);
+    setup(); sc_init(&s); memset(&sel,0,sizeof(sel));
+    CHECK(sc_option(&s,"--autoconnect","one")==1); sel.name="Fixture device";
+    CHECK(!sc_open(&s,&sel,&config,&d,&p,&error));
+    strcpy(devices[0].name,"renamed");
+    CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_NOT_FOUND && !p);
+    setup(); sc_init(&s); memset(&sel,0,sizeof(sel));
+    devices[0].vid=0x1234; devices[0].pid=0xabcd;
+    CHECK(sc_option(&s,"--autoconnect","any")==1);
+    CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && !strcmp(d.path,"port-B"));
+    CHECK(sc_option(&s,"--prefer-boards","off")==1);
+    CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && !strcmp(d.path,"port-A"));
+    CHECK(sc_option(&s,"--prefer-boards","on")==1);
+    CHECK(sc_option(&s,"--board","1234:abcd=Custom model")==1);
+    CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && !strcmp(d.path,"port-A"));
     puts("Automatic selection, busy-port fallback, pinned identity, ambiguity and explicit blocking passed"); return 0;
 }

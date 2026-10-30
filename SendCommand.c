@@ -167,7 +167,8 @@ static void help(void) {
          "  SendCommand -p /dev/ttyUSB0 --listen ws 127.0.0.1 8765\n\n"
          "Exit: 0 normal, 1 I/O failure, 2 usage/selection, 124 no response.\n"
          "Network modes have no authentication/TLS; use a trusted local tunnel.\n"
-         "DTR off/keep cannot prevent all driver-induced Arduino reset pulses.");
+         "DTR off/keep cannot prevent all driver-induced Arduino reset pulses.\n"
+         "Mark/space parity requires driver support; 1.5 stop bits requires Windows/5 data bits.");
 }
 static unsigned number(const char *s,unsigned max,int base,int *ok) {
     char *end; unsigned long n;
@@ -186,6 +187,10 @@ static int write_all(suart_port *p,const unsigned char *b,size_t n) {
         if(n && suart_millis()>=end) return -1;
     }
     return n?-1:0;
+}
+static int write_terminal(suart_port *p,const unsigned char *b,size_t n) {
+    if(!write_all(p,b,n)) return 0;
+    fputs("Write failed; delivery uncertain, terminal bytes not replayed\n",stderr); return -1;
 }
 static void show_config(suart_port *p) {
     suart_config c; suart_modem m;
@@ -293,7 +298,7 @@ int main(int argc,char **argv) {
         if(!net) { fputs("Cannot open network adapter\n",stderr); rc=1; goto done; }
         if(!quiet) fprintf(stderr,"%s %s %s:%u\n",client?"Connecting":"Listening",mode,host,net_port);
     }
-    if(raw && !quiet) fputs("Ctrl+] then ?: help; q: quit; b: break; d: pulse DTR; m: modem/config; ]: literal Ctrl+]\n",stderr);
+    if(raw && !quiet) fputs("Ctrl+] then ?: help; q: quit; b: break; d: DTR; m: config; e: echo; c: clear; ]: literal Ctrl+]\n",stderr);
     while(!stopping) {
         size_t n=0; uint64_t now=suart_millis();
         if(!port) {
@@ -305,7 +310,7 @@ int main(int argc,char **argv) {
             if(now<retry) { suart_sleep(5); continue; }
             result=sc_open(&features,&sel,&c,&device,&port,&open_error);
             if(result==SUART_AMBIGUOUS || result==SUART_INVALID) {
-                fputs("Selection is invalid or ambiguous; add --serial or --port\n",stderr); rc=2; break;
+                fputs("Selection is invalid, blocked or ambiguous; check filters and add --serial or --port\n",stderr); rc=2; break;
             }
             if(result) {
                 if(!reconnect || result==SUART_INVALID || result==SUART_UNSUPPORTED) {
@@ -371,11 +376,14 @@ int main(int argc,char **argv) {
             for(j=0;j<n;++j) {
                 unsigned ch=buffer[j];
                 int data=0;
-                if(features.exit_key && ch==(unsigned)features.exit_key) { stopping=1; k=0; break; }
+                if(features.exit_key && ch==(unsigned)features.exit_key) {
+                    if(k && write_terminal(port,outgoing,k)) rc=1;
+                    stopping=1; k=0; break;
+                }
                 if(escape) {
                     escape=0;
                     if(ch=='q') { stopping=1; k=0; break; }
-                    if(ch=='?') fputs("\r\nCtrl+] q quit | b break | d DTR reset | m modem/config | ] literal escape\r\n",stderr);
+                    if(ch=='?') fputs("\r\nCtrl+] q quit | b break | d DTR reset | m config | e echo | c clear | ] literal escape\r\n",stderr);
                     else if(ch=='m') show_config(port);
                     else if(ch=='e') features.echo=!features.echo;
                     else if(ch=='c') { int previous=features.clear_screen; features.clear_screen=1; sc_console(&features); features.clear_screen=previous; }
@@ -384,21 +392,28 @@ int main(int argc,char **argv) {
                         if(suart_set_dtr(port,0)) rc=1;
                         suart_sleep(100); if(suart_set_dtr(port,1)) rc=1;
                     } else if(ch==']') { ch=29; data=1; }
-                } else if(ch==29) escape=1;
+                } else if(ch==29) {
+                    if(k && write_terminal(port,outgoing,k)) { rc=1; break; }
+                    k=0; escape=1;
+                }
                 else data=1;
                 if(data) {
                     size_t added=0;
                     if(sizeof(outgoing)-k<4352) {
-                        if(write_all(port,outgoing,k)) { rc=1; break; }
+                        if(write_terminal(port,outgoing,k)) { rc=1; break; }
                         k=0;
                     }
                     if(sc_input(&features,(unsigned char)ch,outgoing+k,sizeof(outgoing)-k,&added)) {
                         fputs("Terminal line overflow or echo/log failure; unsubmitted input discarded\n",stderr); rc=1; break;
                     }
                     k+=added;
+                    if(features.line_buffer && added) {
+                        if(write_terminal(port,outgoing,k)) { rc=1; break; }
+                        k=0;
+                    }
                 }
             }
-            if(k && !rc && write_all(port,outgoing,k)) rc=1;
+            if(k && !rc && write_terminal(port,outgoing,k)) rc=1;
             n=0;
         }
         if(rc) break;

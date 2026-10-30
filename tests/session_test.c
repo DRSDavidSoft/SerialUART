@@ -18,6 +18,7 @@ int main(void) {
     CHECK(!sc_input(&s,127,b,sizeof(b),&n) && !n && s.line_size==1);
     CHECK(!sc_input(&s,'B',b,sizeof(b),&n) && !n);
     CHECK(!sc_input(&s,'\r',b,sizeof(b),&n) && n==6 && !memcmp(b,"aB\0\xff\r\n",6));
+    CHECK(!sc_input(&s,'\n',b,sizeof(b),&n) && !n); /* CRLF is one submitted line. */
     memset(s.line,'x',sizeof(s.line)); s.line_size=sizeof(s.line);
     CHECK(sc_input(&s,'x',b,sizeof(b),&n)==-1 && !n);
     sc_init(&s);

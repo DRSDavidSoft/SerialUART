@@ -110,6 +110,11 @@ int sc_output_close(sc_session *s) {
 }
 int sc_input(sc_session *s,unsigned char c,unsigned char *out,size_t cap,size_t *n) {
     *n=0;
+    if(c=='\n' && s->input_cr) {
+        s->input_cr=0;
+        if(s->line_buffer || s->enter_size) return 0;
+    }
+    s->input_cr=c=='\r';
     if(s->line_buffer && (c==8 || c==127)) {
         if(s->line_size) {
             --s->line_size;

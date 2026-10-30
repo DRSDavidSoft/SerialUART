@@ -72,7 +72,7 @@ class Sessions(unittest.TestCase):
     def test_profiles_precedence_unicode_and_literal_option_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
-            global_dir = root / "global" / ("SerialUART" if os.name == "nt" else "serialuart")
+            global_dir = root / "全局 global" / ("SerialUART" if os.name == "nt" else "serialuart")
             global_dir.mkdir(parents=True)
             (global_dir / "settings.cfg").write_text("--baud 9600\n")
             (root / ".serialuart").mkdir()
@@ -80,7 +80,7 @@ class Sessions(unittest.TestCase):
             explicit = root / "串口 profile.cfg"
             explicit.write_text('# comment\n--baud 38400\n--name="Mixed Case 串口"\n', encoding="utf-8-sig")
             env = dict(os.environ)
-            env["APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME"] = str(root / "global")
+            env["APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME"] = str(root / "全局 global")
             p = subprocess.run(EMULATOR + [CLI, "--profiles", "--baud", "115200", "--config", str(explicit), "--list-settings"],
                                cwd=root, env=env, capture_output=True, timeout=5)
             self.assertEqual(p.returncode, 0, p.stderr)
@@ -95,7 +95,7 @@ class Sessions(unittest.TestCase):
     def test_invalid_profiles_and_feature_values(self):
         with tempfile.TemporaryDirectory() as tmp:
             profile = pathlib.Path(tmp) / "invalid.cfg"
-            for text in ("--send ACTUATE\n", "--config nested.cfg\n", "--unknown value\n", "--echo maybe\n", "x" * 9000):
+            for text in ("--send ACTUATE\n", "--config nested.cfg\n", "--unknown value\n", "--echo maybe\n", "--baud 9600\0hidden\n", "x" * 9000):
                 profile.write_text(text)
                 p = subprocess.run(EMULATOR + [CLI, "--config", str(profile), "--list-settings"], capture_output=True, timeout=3)
                 self.assertEqual(p.returncode, 2, p.stderr)
@@ -119,6 +119,34 @@ class Sessions(unittest.TestCase):
 
 @unittest.skipIf(os.name == "nt", "POSIX terminal integration; Windows encoder tested separately")
 class Terminal(unittest.TestCase):
+    def test_profile_override_and_bulk_line_submission(self):
+        import pty
+        master, slave = pty.openpty()
+        keyboard, console = pty.openpty()
+        profile = ROOT / "examples/profiles/at-commands.cfg"
+        p = subprocess.Popen(EMULATOR + [CLI, "--config", str(profile), "-p", os.ttyname(slave),
+                                        "--baud", "115200", "--echo", "off", "--show-config"],
+                             stdin=console, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            self.assertIn(b"Ctrl+]", p.stderr.readline())
+            self.assertIn(b"Connected", p.stderr.readline())
+            self.assertIn(b"Driver: 115200 baud", p.stderr.readline())
+            os.write(keyboard, b"A" * 3000 + b"\r\n\x18")
+            received = b""
+            deadline = time.monotonic() + 3
+            while len(received) < 3002 and time.monotonic() < deadline:
+                if select.select([master], [], [], .1)[0]:
+                    received += os.read(master, 4096)
+            self.assertEqual(received, b"A" * 3000 + b"\r\n")
+            out, err = p.communicate(timeout=3)
+            self.assertEqual(p.returncode, 0, err)
+        finally:
+            if p.poll() is None:
+                p.kill()
+                p.communicate(timeout=3)
+            for fd in (master, slave, keyboard, console):
+                os.close(fd)
+
     def test_line_edit_echo_binary_enter_and_exit_key(self):
         import pty
         master, slave = pty.openpty()

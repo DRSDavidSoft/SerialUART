@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
-void sc_init(sc_session *s) { memset(s,0,sizeof(*s)); s->bulk=1; s->log_append=1; s->log_line_start=1; }
+void sc_init(sc_session *s) { memset(s,0,sizeof(*s)); s->bulk=1; s->log_append=1; s->log_line_start=1; s->prefer_boards=1; }
 static int toggle(const char *v,int *out) {
     if(!strcmp(v,"on")) *out=1;
     else if(!strcmp(v,"off")) *out=0;
@@ -53,7 +53,7 @@ static int alias(sc_session *s,const char *v) {
 int sc_option(sc_session *s,const char *a,const char *v) {
     static const char *options[]={"--display","--log","--log-mode","--log-format","--force-newline","--status","--title",
         "--clear-screen","--echo","--line-buffer","--bulk-send","--exit-key","--enter","--enter-hex",
-        "--autoconnect","--include","--exclude","--block","--board","--board-name"};
+        "--autoconnect","--include","--exclude","--block","--board","--board-name","--prefer-boards"};
     size_t i;
     if(!strcmp(a,"--log-time")) { s->log_time=1; return 1; }
     if(!strcmp(a,"--list")) { s->list_kind=1; return 1; }
@@ -83,15 +83,17 @@ int sc_option(sc_session *s,const char *a,const char *v) {
     else if(!strcmp(a,"--echo")) return toggle(v,&s->echo);
     else if(!strcmp(a,"--line-buffer")) return toggle(v,&s->line_buffer);
     else if(!strcmp(a,"--bulk-send")) return toggle(v,&s->bulk);
+    else if(!strcmp(a,"--prefer-boards")) return toggle(v,&s->prefer_boards);
     else if(!strcmp(a,"--clear-screen")) return toggle(v,&s->clear_screen);
     else if(!strcmp(a,"--title")) {
-        const unsigned char *p=(const unsigned char *)v; if(strlen(v)>240) return -1;
+        const unsigned char *p=(const unsigned char *)v; if(!*v || strlen(v)>240) return -1;
         for(;*p;++p) if(*p<32 || *p==127) return -1;
         s->title=v; s->no_status=1;
     } else if(!strcmp(a,"--exit-key")) {
         if(strlen(v)!=1 || !isalpha((unsigned char)*v) || (unsigned char)*v>127) return -1;
         s->exit_key=toupper((unsigned char)*v)-'A'+1;
     } else if(!strcmp(a,"--enter")) {
+        s->input_cr=0;
         if(!strcmp(v,"cr")) { s->enter[0]='\r'; s->enter_size=1; }
         else if(!strcmp(v,"lf")) { s->enter[0]='\n'; s->enter_size=1; }
         else if(!strcmp(v,"crlf")) { memcpy(s->enter,"\r\n",2); s->enter_size=2; }
@@ -101,6 +103,7 @@ int sc_option(sc_session *s,const char *a,const char *v) {
         } else if(!strcmp(v,"preserve")) s->enter_size=0;
         else return -1;
     } else if(!strcmp(a,"--enter-hex")) {
+        s->input_cr=0;
         if(suart_hex(v,s->enter,sizeof(s->enter),&s->enter_size) || !s->enter_size) return -1;
     } else if(!strcmp(a,"--autoconnect")) {
         if(!strcmp(v,"none")) s->auto_connect=0;
@@ -120,6 +123,7 @@ void sc_help(void) {
          "  --profiles                Opt into global + .serialuart/settings.cfg\n"
          "  --list-settings | --list-boards | --list-filters | --list-all\n"
          "  --autoconnect none|one|any Opt into first eligible port; ONE pins identity\n"
+         "  --prefer-boards on|off     Prefer known models during automatic selection\n"
          "  --board VID:PID=NAME       Custom USB model name (repeatable)\n"
          "  --board-name NAME          Select an exact recognized model name\n"
          "  --include RULE --exclude RULE --block RULE (repeatable)\n"
