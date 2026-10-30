@@ -24,6 +24,7 @@ Run `ctest --test-dir build -C Release --output-on-failure` after building.
 - 64 KiB fragmented counting-pattern loopback, corrupt echo rejection and silent
   peer timeout; delimiter deadlines under continuous unterminated input.
 - GNU Make entry point on Linux/macOS and NMake entry point on Windows.
+- macOS blocked PTY TX queue deadline while incoming RX remains serviced.
 
 Python's standard library drives integration tests. Windows skips PTY-specific
 tests and runs the real socket tests. No test opens arbitrary physical COM ports.

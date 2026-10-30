@@ -116,6 +116,29 @@ class Native(unittest.TestCase):
                 os.close(master)
                 os.close(slave)
 
+    @unittest.skipUnless(sys.platform == "darwin", "macOS PTY retains an unread TX queue")
+    def test_receive_continues_while_transmit_queue_is_blocked(self):
+        master, slave = pty.openpty()
+        p = subprocess.Popen(EMULATOR + [CLI, "-p", os.ttyname(slave), "--send", "X",
+                                        "--write-timeout", "300", "--timeout", "100"],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            self.assertIn(b"Connected", p.stderr.readline())
+            self.assertTrue(select.select([master], [], [], 3)[0])
+            # Leave X unread to block the TX queue; RX must still be serviced.
+            time.sleep(.05)
+            os.write(master, b"incoming while TX is blocked")
+            out, err = p.communicate(timeout=3)
+            self.assertEqual(p.returncode, 1, err)
+            self.assertEqual(out, b"incoming while TX is blocked")
+            self.assertIn(b"TX queue did not empty", err)
+        finally:
+            if p.poll() is None:
+                p.kill()
+                p.communicate(timeout=3)
+            os.close(master)
+            os.close(slave)
+
     @unittest.skipUnless(sys.platform.startswith("linux"), "Linux sysfs discovery")
     def test_discovery_no_name_whitelist_or_device_opens(self):
         with tempfile.TemporaryDirectory() as tmp:

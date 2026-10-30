@@ -222,7 +222,7 @@ int main(int argc,char **argv) {
     unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
     int eof=0,escape=0,received=0,sent_command=0; uint64_t last=0,retry=0;
     int newline=0,until=-1,discard_input=0,diagnostics=0,tx_waited=0;
-    uint64_t reply_end=0;
+    uint64_t reply_end=0,tx_end=0;
     unsigned char buffer[4096],command[65536]; size_t command_len=0;
 #ifdef _WIN32
     if(windows_arguments(&argc,&argv)) { fputs("Cannot decode command line\n",stderr); return 1; }
@@ -340,11 +340,15 @@ int main(int argc,char **argv) {
             if(until>=0 && buffer[n-1]==(unsigned char)until) break;
         }
         if(eof) {
+            if(until>=0 && suart_millis()>=reply_end) { rc=124; break; }
             if(!tx_waited) {
-                if(suart_wait_tx(port,write_timeout)!=SUART_OK) { fputs("TX queue did not empty; delivery uncertain\n",stderr); rc=1; break; }
+                int result;
+                if(!tx_end) tx_end=suart_millis()+write_timeout;
+                result=suart_wait_tx(port,0);
+                if(result==SUART_TIMEOUT && suart_millis()<tx_end) continue;
+                if(result!=SUART_OK) { fputs("TX queue did not empty; delivery uncertain\n",stderr); rc=1; break; }
                 tx_waited=1; last=suart_millis();
             }
-            if(until>=0 && suart_millis()>=reply_end) { rc=124; break; }
             if(suart_millis()-last>=timeout) { rc=until>=0 || ((send_text || hex) && !received)?124:0; break; }
             continue;
         }
