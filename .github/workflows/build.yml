@@ -74,6 +74,15 @@ jobs:
           cpack -C Release -G ZIP -B ../dist -D "CPACK_PACKAGE_FILE_NAME=SerialUART-$TARGET-$LINKAGE"
           cd ..
           python tools/checksums.py dist
+      - name: Verify GNU Make entry point
+        if: matrix.linkage == 'static' && (matrix.target == 'linux-x64-gcc' || matrix.target == 'macos-arm64-clang')
+        run: make test
+      - name: Verify NMake entry point
+        if: matrix.linkage == 'static' && matrix.target == 'windows-x64-msvc'
+        shell: cmd
+        run: |
+          for /f "usebackq tokens=*" %%i in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do call "%%i\Common7\Tools\VsDevCmd.bat" -arch=x64
+          nmake /nologo /f Makefile.msvc test
       - name: Official Socket.IO client and heartbeat interoperability
         if: matrix.target == 'linux-x64-gcc' && matrix.linkage == 'static'
         shell: bash

@@ -51,6 +51,7 @@ static int windows_arguments(int *argc,char ***argv) {
 }
 #endif
 static int terminal;
+static unsigned write_timeout=2000;
 #ifdef _WIN32
 static DWORD console_mode;
 static HANDLE input_handle;
@@ -162,7 +163,13 @@ static void help(void) {
          "  --boot-wait MS            Wait after every successful open (0..60000)\n\n"
          "Modes (default: binary stdin -> serial -> stdout):\n"
          "  -s, --send TEXT            Send text, receive until idle timeout\n"
+         "  --sendline TEXT            Send text followed by LF\n"
          "  --hex HEX                 Send binary, e.g. \"00 41 FF 0D 0A\"\n"
+         "  --until HEX               Stop at a reply byte (e.g. 0A, includes it);\n"
+         "                            --timeout is then a total reply deadline\n"
+         "  --write-timeout MS        Write/TX queue deadline (1..60000, default 2000)\n"
+         "  --discard-input           Explicitly discard RX after opening\n"
+         "  --show-config             Report driver settings and modem bits to stderr\n"
          "  --terminal                Raw terminal; Ctrl+] then ? for shortcuts\n"
          "  --receive                 Receive only; stdin is ignored\n"
          "  --timeout MS              Idle timeout after send/EOF (default 1000)\n"
@@ -192,20 +199,30 @@ static int list(const suart_device *d,void *ctx) {
     (void)ctx; printf("%s\t%s\t%04X:%04X\t%s\n",d->path,d->name,d->vid,d->pid,d->serial); return 0;
 }
 static int write_all(suart_port *p,const unsigned char *b,size_t n) {
-    uint64_t end=suart_millis()+2000;
+    uint64_t end=suart_millis()+write_timeout;
     while(n && !stopping) {
-        size_t sent=0;
-        if(suart_write(p,b,n,&sent,100)!=SUART_OK) return -1;
+        size_t sent=0; uint64_t now=suart_millis();
+        if(now>=end) return -1;
+        if(suart_write(p,b,n,&sent,(unsigned)(end-now>100?100:end-now))!=SUART_OK) return -1;
         b+=sent; n-=sent;
         if(n && suart_millis()>=end) return -1;
     }
     return n?-1:0;
+}
+static void show_config(suart_port *p) {
+    suart_config c; suart_modem m;
+    if(!suart_get_config(p,&c)) fprintf(stderr,"Driver: %u baud, %u%c%u, RTS/CTS %s\n",c.baud,c.data_bits,c.parity,c.stop_bits,c.rts_cts?"on":"off");
+    else fprintf(stderr,"Driver configuration unavailable (native %lu)\n",suart_native_error(p));
+    if(!suart_get_modem(p,&m)) fprintf(stderr,"Modem logical bits: known=0x%02X asserted=0x%02X (CTS=01 DSR=02 DCD=04 RI=08 DTR=10 RTS=20)\n",m.known,m.asserted);
+    else fprintf(stderr,"Modem status unavailable (native %lu)\n",suart_native_error(p));
 }
 int main(int argc,char **argv) {
     suart_config c; suart_selector sel={0}; suart_port *port=NULL; suart_device device;
     suart_net *net=NULL; const char *send_text=NULL,*hex=NULL,*mode=NULL,*host=NULL,*origin=NULL;
     unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
     int eof=0,escape=0,received=0,sent_command=0; uint64_t last=0,retry=0;
+    int newline=0,until=-1,discard_input=0,diagnostics=0,tx_waited=0;
+    uint64_t reply_end=0;
     unsigned char buffer[4096],command[65536]; size_t command_len=0;
 #ifdef _WIN32
     if(windows_arguments(&argc,&argv)) { fputs("Cannot decode command line\n",stderr); return 1; }
@@ -219,6 +236,8 @@ int main(int argc,char **argv) {
         if(!strcmp(a,"--terminal")) { raw=1; continue; }
         if(!strcmp(a,"--receive")) { receive=1; continue; }
         if(!strcmp(a,"--rts-cts")) { c.rts_cts=1; continue; }
+        if(!strcmp(a,"--discard-input")) { discard_input=1; continue; }
+        if(!strcmp(a,"--show-config")) { diagnostics=1; continue; }
         if(!strcmp(a,"--quiet") || !strcmp(a,"-q")) { quiet=1; continue; }
         if(i+1>=argc) { fprintf(stderr,"Missing value for %s\n",a); return 2; }
         v=argv[++i];
@@ -233,6 +252,8 @@ int main(int argc,char **argv) {
         else if(!strcmp(a,"--parity")) { if(strlen(v)!=1 || !strchr("NEO",*v)) ok=0; else c.parity=*v; }
         else if(!strcmp(a,"--boot-wait")) c.boot_wait_ms=number(v,60000,10,&ok);
         else if(!strcmp(a,"--timeout")) timeout=number(v,60000,10,&ok);
+        else if(!strcmp(a,"--write-timeout")) { write_timeout=number(v,60000,10,&ok); if(!write_timeout) ok=0; }
+        else if(!strcmp(a,"--until")) until=(int)number(v,255,16,&ok);
         else if(!strcmp(a,"--reconnect")) { reconnect=number(v,60000,10,&ok); if(reconnect<10) ok=0; }
         else if(!strcmp(a,"--dtr")) {
             if(!strcmp(v,"keep")) c.dtr=SUART_DTR_KEEP;
@@ -242,6 +263,7 @@ int main(int argc,char **argv) {
             else ok=0;
         }
         else if(!strcmp(a,"--send") || !strcmp(a,"-s")) send_text=v;
+        else if(!strcmp(a,"--sendline")) { send_text=v; newline=1; }
         else if(!strcmp(a,"--hex")) hex=v;
         else if(!strcmp(a,"--origin")) origin=v;
         else if(!strcmp(a,"--listen") || !strcmp(a,"--connect")) {
@@ -253,11 +275,12 @@ int main(int argc,char **argv) {
         if(!ok) { fprintf(stderr,"Invalid value for %s: %s\n",a,v); return 2; }
     }
     if(!ok || (send_text && hex) || (raw+receive+(send_text!=NULL || hex!=NULL)+(mode!=NULL)>1) ||
-       (origin && !mode) || (client && strcmp(mode,"tcp"))) {
+       (origin && !mode) || (client && strcmp(mode,"tcp")) ||
+       (until>=0 && (raw || mode || (!receive && !send_text && !hex)))) {
         fputs("Conflicting modes or invalid network arguments; see --help\n",stderr); return 2;
     }
     if(argc==1) { help(); return 2; }
-    if(send_text) { command_len=strlen(send_text); if(command_len>sizeof(command)) return 2; memcpy(command,send_text,command_len); }
+    if(send_text) { command_len=strlen(send_text); if(command_len>sizeof(command)-(size_t)newline) return 2; memcpy(command,send_text,command_len); if(newline) command[command_len++]='\n'; }
     if(hex && suart_hex(hex,command,sizeof(command),&command_len)) { fputs("Invalid hex bytes\n",stderr); return 2; }
     signal(SIGINT,stop); signal(SIGTERM,stop);
 #ifndef _WIN32
@@ -275,7 +298,7 @@ int main(int argc,char **argv) {
     while(!stopping) {
         size_t n=0; uint64_t now=suart_millis();
         if(!port) {
-            int result;
+            int result; unsigned long open_error=0;
             if(raw) {
                 if(offline_terminal(&escape)) { rc=1; break; }
                 if(stopping) break;
@@ -285,22 +308,25 @@ int main(int argc,char **argv) {
             if(result==SUART_AMBIGUOUS || result==SUART_INVALID) {
                 fputs("Selection is invalid or ambiguous; add --serial or --port\n",stderr); rc=2; break;
             }
-            if(!result) result=suart_open(&port,device.path,&c);
+            if(!result) result=suart_open_ex(&port,device.path,&c,&open_error);
             if(result) {
                 if(!reconnect || result==SUART_INVALID || result==SUART_UNSUPPORTED) {
-                    fprintf(stderr,"Cannot open device (status %d); check path, permissions and baud\n",result); rc=1; break;
+                    fprintf(stderr,"Cannot open device (status %d, native %lu); check path, permissions, ownership and baud\n",result,open_error); rc=1; break;
                 }
                 retry=now+reconnect; continue;
             }
             if(!quiet) fprintf(stderr,"Connected %s @ %u baud\n",device.path,c.baud);
+            if(discard_input && suart_discard(port,SUART_RX)) { fputs("Cannot discard input\n",stderr); rc=1; break; }
+            if(diagnostics) show_config(port);
             last=suart_millis();
+            reply_end=last+timeout;
             if((send_text || hex) && !sent_command) {
                 sent_command=1;
                 if(write_all(port,command,command_len)) { fputs("Write failed; delivery uncertain, command not replayed\n",stderr); rc=1; break; }
-                eof=1; last=suart_millis();
+                eof=1; last=suart_millis(); reply_end=last+timeout;
             }
         }
-        if(suart_read(port,buffer,sizeof(buffer),&n,5)!=SUART_OK) {
+        if(suart_read(port,buffer,until>=0?1:sizeof(buffer),&n,5)!=SUART_OK) {
             if(!quiet) fprintf(stderr,"Serial read failed (native %lu)\n",suart_native_error(port));
             suart_close(port); port=NULL;
             if(!reconnect || eof) { rc=1; break; }
@@ -311,12 +337,21 @@ int main(int argc,char **argv) {
             if(net) {
                 if(suart_net_write(net,buffer,n) && client) { rc=1; break; }
             } else if(fwrite(buffer,1,n,stdout)!=n) { rc=1; break; }
+            if(until>=0 && buffer[n-1]==(unsigned char)until) break;
         }
         if(eof) {
-            if(suart_millis()-last>=timeout) { rc=(send_text || hex) && !received?124:0; break; }
+            if(!tx_waited) {
+                if(suart_wait_tx(port,write_timeout)!=SUART_OK) { fputs("TX queue did not empty; delivery uncertain\n",stderr); rc=1; break; }
+                tx_waited=1; last=suart_millis();
+            }
+            if(until>=0 && suart_millis()>=reply_end) { rc=124; break; }
+            if(suart_millis()-last>=timeout) { rc=until>=0 || ((send_text || hex) && !received)?124:0; break; }
             continue;
         }
-        if(receive) continue;
+        if(receive) {
+            if(until>=0 && suart_millis()>=reply_end) { rc=124; break; }
+            continue;
+        }
         if(net) {
             int result=suart_net_read(net,buffer,sizeof(buffer),&n);
             if(result<0 && client) { rc=1; break; }
@@ -333,6 +368,7 @@ int main(int argc,char **argv) {
                     escape=0;
                     if(ch=='q') { stopping=1; break; }
                     if(ch=='?') fputs("\r\nCtrl+] q quit | b break | d DTR reset | ] literal escape\r\n",stderr);
+                    else if(ch=='m') show_config(port);
                     else if(ch=='b') { if(suart_send_break(port,250)) rc=1; }
                     else if(ch=='d') {
                         if(suart_set_dtr(port,0)) rc=1;
@@ -349,5 +385,8 @@ int main(int argc,char **argv) {
         }
     }
 done:
+    if(port && !rc && suart_wait_tx(port,write_timeout)!=SUART_OK) {
+        fputs("TX queue did not empty; delivery uncertain\n",stderr); rc=1;
+    }
     restore(); suart_close(port); suart_net_close(net); return rc;
 }
