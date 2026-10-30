@@ -36,6 +36,9 @@ int main(void) {
     suart_config_init(&c); CHECK(c.baud==57600 && c.dtr==SUART_DTR_KEEP);
     c.data_bits=9; CHECK(suart_open(&port,"nonexistent",&c)==SUART_INVALID && !port);
     CHECK(suart_read(NULL,bytes,sizeof(bytes),&n,0)==SUART_INVALID);
+    CHECK(suart_wait_tx(NULL,0)==SUART_INVALID);
+    CHECK(suart_discard(NULL,SUART_RX)==SUART_INVALID);
+    CHECK(suart_read_until(NULL,bytes,sizeof(bytes),&n,0,0)==SUART_INVALID && !n);
     CHECK(suart_resolve(NULL,&d)==SUART_INVALID);
     selector.path="/a/virtual/path"; CHECK(!suart_resolve(&selector,&d)); CHECK(!strcmp(d.path,selector.path));
     puts("Protocol, binary codecs and API validation passed"); return 0;

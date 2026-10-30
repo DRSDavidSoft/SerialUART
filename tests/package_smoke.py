@@ -13,7 +13,17 @@ find_package(SerialUART 2 REQUIRED)
 add_executable(consumer main.c)
 target_link_libraries(consumer PRIVATE SerialUART::serialuart)
 ''')
-    (root / "main.c").write_text('#include <SerialUART.h>\nint main(void) { suart_config c; suart_config_init(&c); return c.baud!=57600; }\n')
+    (root / "main.c").write_text('''#include <SerialUART.h>
+int main(void) {
+    suart_config c; suart_modem m; suart_counters counters;
+    unsigned char b; size_t n;
+    suart_config_init(&c);
+    return c.baud!=57600 || suart_wait_tx(NULL,0)!=SUART_INVALID ||
+        suart_get_modem(NULL,&m)!=SUART_INVALID ||
+        suart_get_counters(NULL,&counters)!=SUART_INVALID ||
+        suart_read_until(NULL,&b,1,&n,'\\n',0)!=SUART_INVALID;
+}
+''')
     subprocess.run(["cmake", "-S", str(root), "-B", str(root / "build"), f"-DCMAKE_PREFIX_PATH={prefix}"], check=True)
     subprocess.run(["cmake", "--build", str(root / "build"), "--config", "Release"], check=True)
     env = dict(os.environ)
@@ -25,8 +35,10 @@ target_link_libraries(consumer PRIVATE SerialUART::serialuart)
     subprocess.run([str(exe)], check=True, env=env)
     cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
     version = subprocess.check_output([str(cli), "--version"], env=env).strip()
-    if version != b"2.0.0":
+    if version != b"2.1.0":
         raise SystemExit("Installed executable version differs from expected package")
     manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
     if not manifest or "Source commit:" not in manifest[0].read_text():
         raise SystemExit("Package is missing source provenance")
+    loopback = prefix / "bin" / ("SerialLoopback.exe" if os.name == "nt" else "SerialLoopback")
+    subprocess.run([str(loopback), "--help"], check=True, env=env)

@@ -30,6 +30,19 @@ cmake --build build-mingw
 .\build-mingw\SendCommand.exe --list
 ```
 
+The NMake entry point uses the same targets and native link dependencies:
+
+```bat
+nmake /nologo /f Makefile.msvc test
+nmake /nologo /f Makefile.msvc install PREFIX=C:\Tools\SerialUART
+```
+
+Run this in an **x64 Visual Studio developer terminal**, which supplies `cl`,
+`link`, `nmake` and SDK environment variables. It creates `build-nmake` using
+CMake's `NMake Makefiles` generator. Override `BUILD_DIR` for another build
+directory and `CMAKE_FLAGS=-DBUILD_SHARED_LIBS=ON` for a shared build. NMake
+and GNU Make syntax are different; use the matching entry point.
+
 Default builds link the serial library statically. MSVC's runtime is supplied by
 Windows/Visual C++ runtime installation; MinGW installations may supply runtime
 DLLs depending on their toolchain. Do not mix import libraries from incompatible
@@ -59,6 +72,20 @@ nodes. For the Pi GPIO UART, enable the UART and disable the serial login consol
 using the OS configuration tool; the active port is often `/dev/serial0`.
 GPIO UART is 3.3 V logic, not an RS-232 voltage interface. USB Arduino devices
 usually appear as `/dev/ttyACM*` or `/dev/ttyUSB*`.
+
+GNU Make users can run `make test` or `make install PREFIX="$HOME/.local"`.
+The wrapper uses CMake; override `BUILD_DIR` and `CMAKE_FLAGS` as needed.
+`make clean` cleans compiler outputs through the build tool without deleting
+the build directory. These are build-time dependencies, not runtime requirements.
+
+UART names and routing vary by Pi model and overlays. `/dev/serial0` may point
+to `ttyS0`, `ttyAMA0`, or a Pi 5 debug UART such as `ttyAMA10`; it is not a promise
+that pins 8/10 are currently routed to that device. Inspect the active alias,
+UART overlays and login-console configuration using the
+[current Raspberry Pi UART guide](https://www.raspberrypi.com/documentation/computers/configuration.html#configuring-uarts).
+Bluetooth and a serial console may already own an interface. Check wiring,
+clock/baud behavior and flow-control availability on the actual board before
+interpreting a loopback test.
 
 ### ARMv7 cross build
 
@@ -105,7 +132,7 @@ Build-tree consumers can use `add_subdirectory(SerialUART)` and the same target.
 Linux:
 
 ```sh
-cc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c examples/protocol.c examples/network.c -o SendCommand
+cc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
 ```
 
 MinGW-w64:
@@ -120,9 +147,18 @@ MSVC developer terminal:
 cl /nologo /std:c11 /O2 /Ilib /Iexamples SendCommand.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
 ```
 
-For macOS append `-framework IOKit -framework CoreFoundation` to the Unix command.
-For the serial library alone, compile only `lib/SerialUART.c`; the protocol and
-network adapters are optional and introduce no serial library dependency.
+For macOS omit `lib/linux_native.c` and append
+`-framework IOKit -framework CoreFoundation` to the Unix command.
+For the serial library alone, compile `lib/SerialUART.c` and, on Linux only,
+`lib/linux_native.c`; protocol/network adapters introduce no serial library
+dependency. Linux's native helper keeps kernel `termios2` separate from libc's
+incompatible `termios` definition; do not concatenate the source files.
+
+Build the standalone loopback tool on Linux with:
+
+```sh
+cc -std=c99 -O2 -Ilib examples/SerialLoopback.c lib/SerialUART.c lib/linux_native.c -o SerialLoopback
+```
 
 ## CI/CD
 
@@ -130,11 +166,11 @@ network adapters are optional and introduce no serial library dependency.
 combinations (five compiler/platform targets × static/shared), plus ARMv7/QEMU.
 Every native build installs to a staging prefix and builds a separate CMake
 consumer against it. Packages include the executable, library/import library,
-public header, CMake config, source/compiler manifest, guides and host adapter sources. Each ZIP has a
+public header, `SerialLoopback`, CMake config, source/compiler manifest, guides and host adapter sources. Each ZIP has a
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
-required branch check. Tag `v2.0.0` (matching the source version) to run the same
+required branch check. Tag `v2.1.0` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
 releases are not overwritten. Packages receive GitHub build-provenance attestations.
 Review the draft and publish it manually.
