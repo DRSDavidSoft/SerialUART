@@ -327,7 +327,14 @@ class SerialPTY(unittest.TestCase):
             os.write(keyboard, b"\x1dq")
             p.communicate(timeout=3)
             self.assertEqual(p.returncode, 0)
-            self.assertEqual(termios.tcgetattr(console), original)
+            restored = termios.tcgetattr(console)
+            if sys.platform == "darwin":
+                # XNU sets transient PENDIN when ICANON is re-enabled even when
+                # tcsetattr receives the exact saved flags (bsd/kern/tty.c).
+                pending = getattr(termios, "PENDIN", 0x20000000)
+                restored[3] &= ~pending
+                original[3] &= ~pending
+            self.assertEqual(restored, original)
         finally:
             if p.poll() is None:
                 p.kill()
