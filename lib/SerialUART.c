@@ -267,7 +267,7 @@ int suart_enumerate(suart_device_fn cb,void *ctx) {
         }
         if(SetupDiGetDeviceInstanceIdW(set,&info,text,512,NULL)) {
             char id[2048],*tail; text[511]=0; utf8(text,id,sizeof(id)); tail=strrchr(id,'\\');
-            if(tail && !strchr(tail+1,'&')) snprintf(d.serial,sizeof(d.serial),"%.255s",tail+1);
+            if(d.vid && !strncmp(id,"USB\\",4) && tail && !strchr(tail+1,'&')) snprintf(d.serial,sizeof(d.serial),"%.255s",tail+1);
         }
         if(cb(&d,ctx)) break;
     }

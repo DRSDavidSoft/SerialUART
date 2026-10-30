@@ -227,6 +227,35 @@ class SerialPTY(unittest.TestCase):
                 os.close(master)
                 os.close(slave)
 
+    def test_terminal_shortcuts_and_restore(self):
+        import pty
+        import termios
+        master, slave = pty.openpty()
+        keyboard, console = pty.openpty()
+        original = termios.tcgetattr(console)
+        p = subprocess.Popen(EMULATOR + [CLI, "-p", os.ttyname(slave), "--terminal"],
+                             stdin=console, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        try:
+            self.assertIn(b"Ctrl+]", p.stderr.readline())
+            self.assertIn(b"Connected", p.stderr.readline())
+            os.write(keyboard, b"A\x03\x1d]B\x1d?")
+            serial = b""
+            deadline = time.monotonic() + 3
+            while len(serial) < 4 and time.monotonic() < deadline:
+                if select.select([master], [], [], 0.1)[0]:
+                    serial += os.read(master, 16)
+            self.assertEqual(serial, b"A\x03\x1dB")
+            os.write(keyboard, b"\x1dq")
+            p.communicate(timeout=3)
+            self.assertEqual(p.returncode, 0)
+            self.assertEqual(termios.tcgetattr(console), original)
+        finally:
+            if p.poll() is None:
+                p.kill()
+                p.communicate(timeout=3)
+            for fd in (master, slave, keyboard, console):
+                os.close(fd)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
