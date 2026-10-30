@@ -26,6 +26,9 @@ class Native(unittest.TestCase):
             t[0] |= termios.IXON | termios.ICRNL | termios.ISTRIP
             if sys.platform.startswith("linux"):
                 t[2] |= 0x40000000  # Linux UAPI CMSPAR, absent in Python termios.
+            elif sys.platform == "darwin":
+                # Apple termios.h CDTR_IFLOW | CDSR_OFLOW | CCAR_OFLOW.
+                t[2] |= 0x001C0000
             termios.tcsetattr(slave, termios.TCSANOW, t)
             p = subprocess.run(EMULATOR + [NATIVE, os.ttyname(slave), str(master), str(slave)],
                                pass_fds=(master, slave), capture_output=True, timeout=10)

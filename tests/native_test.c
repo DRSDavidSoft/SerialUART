@@ -1,4 +1,5 @@
 #define _DEFAULT_SOURCE
+#define _DARWIN_C_SOURCE
 #define _POSIX_C_SOURCE 200809L
 #include "SerialUART.h"
 #include <stdio.h>
@@ -34,6 +35,10 @@ int main(int argc,char **argv) {
 #endif
     CHECK(suart_open_ex(&other,argv[1],&c,&error)==SUART_ERROR && !other && error);
     CHECK(!suart_write(p,"A\0B",3,&n,100) && n==3);
+#ifdef __APPLE__
+    end=suart_millis();
+    CHECK(suart_wait_tx(p,10)==SUART_TIMEOUT && suart_millis()-end<500);
+#endif
     CHECK(read(master,b,sizeof(b))==3 && !memcmp(b,"A\0B",3));
     CHECK(!suart_wait_tx(p,100));
     CHECK(write(master,"discard",7)==7);

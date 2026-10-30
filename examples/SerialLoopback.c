@@ -54,12 +54,18 @@ int main(int argc,char **argv) {
         cap=total-rx; if(cap>sizeof(reply)) cap=sizeof(reply);
         now=suart_millis();
         if(suart_read(port,reply,cap,&n,(unsigned)(now>=end?0:end-now>10?10:end-now))) goto io_error;
+        if(n>tx-rx) { fputs("Received bytes which were never transmitted by this test\n",stderr); goto done; }
         for(i=0;i<n;++i) if(reply[i]!=pattern[rx+i]) ++errors;
         rx+=n;
     }
     if(rx==total && tx==total) {
         uint64_t now=suart_millis(); unsigned remaining=(unsigned)(now<end?end-now:0);
         rc=errors?1:suart_wait_tx(port,remaining)==SUART_OK?0:124;
+        if(!rc) {
+            size_t extra=0;
+            if(suart_read(port,reply,sizeof(reply),&extra,0)!=SUART_OK || extra) rc=1;
+            if(extra) fputs("Unexpected bytes remained after the expected reply\n",stderr);
+        }
     }
     fprintf(stderr,"TX=%lu RX=%lu mismatches=%lu elapsed=%llu ms\n",(unsigned long)tx,(unsigned long)rx,
             (unsigned long)errors,(unsigned long long)(suart_millis()-start));
