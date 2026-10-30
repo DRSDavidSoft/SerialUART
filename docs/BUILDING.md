@@ -111,13 +111,13 @@ cc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c examples/protoco
 MinGW-w64:
 
 ```sh
-gcc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lws2_32 -o SendCommand.exe
+gcc -std=c99 -O2 -Ilib -Iexamples SendCommand.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lws2_32 -lshell32 -o SendCommand.exe
 ```
 
 MSVC developer terminal:
 
 ```bat
-cl /nologo /std:c11 /O2 /Ilib /Iexamples SendCommand.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib
+cl /nologo /std:c11 /O2 /Ilib /Iexamples SendCommand.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
 ```
 
 For macOS append `-framework IOKit -framework CoreFoundation` to the Unix command.

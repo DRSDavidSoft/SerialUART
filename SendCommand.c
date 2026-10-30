@@ -10,6 +10,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
+#include <shellapi.h>
 #include <io.h>
 #include <fcntl.h>
 #else
@@ -19,6 +20,36 @@
 #endif
 static volatile sig_atomic_t stopping;
 static void stop(int sig) { (void)sig; stopping=1; }
+#ifdef _WIN32
+static char **utf8_arguments;
+static int utf8_argument_count;
+static UINT saved_output_cp;
+static void release_arguments(void) {
+    int i;
+    for(i=0;i<utf8_argument_count;++i) free(utf8_arguments[i]);
+    free(utf8_arguments);
+    fflush(stdout); fflush(stderr);
+    if(saved_output_cp) SetConsoleOutputCP(saved_output_cp);
+}
+static int windows_arguments(int *argc,char ***argv) {
+    LPWSTR *wide; int i; DWORD mode;
+    wide=CommandLineToArgvW(GetCommandLineW(),argc);
+    if(!wide) return -1;
+    utf8_arguments=(char **)calloc((size_t)*argc+1,sizeof(char *));
+    if(!utf8_arguments) { LocalFree(wide); return -1; }
+    utf8_argument_count=*argc; atexit(release_arguments);
+    for(i=0;i<*argc;++i) {
+        int size=WideCharToMultiByte(CP_UTF8,0,wide[i],-1,NULL,0,NULL,NULL);
+        if(!size || !(utf8_arguments[i]=(char *)malloc((size_t)size))) { LocalFree(wide); return -1; }
+        WideCharToMultiByte(CP_UTF8,0,wide[i],-1,utf8_arguments[i],size,NULL,NULL);
+    }
+    LocalFree(wide); *argv=utf8_arguments;
+    if(GetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE),&mode) || GetConsoleMode(GetStdHandle(STD_ERROR_HANDLE),&mode)) {
+        saved_output_cp=GetConsoleOutputCP(); SetConsoleOutputCP(CP_UTF8);
+    }
+    return 0;
+}
+#endif
 static int terminal;
 #ifdef _WIN32
 static DWORD console_mode;
@@ -176,6 +207,9 @@ int main(int argc,char **argv) {
     unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
     int eof=0,escape=0,received=0,sent_command=0; uint64_t last=0,retry=0;
     unsigned char buffer[4096],command[65536]; size_t command_len=0;
+#ifdef _WIN32
+    if(windows_arguments(&argc,&argv)) { fputs("Cannot decode command line\n",stderr); return 1; }
+#endif
     suart_config_init(&c);
     for(i=1;i<argc;++i) {
         const char *a=argv[i],*v=NULL;

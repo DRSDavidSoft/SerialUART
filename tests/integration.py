@@ -139,6 +139,12 @@ class Network(unittest.TestCase):
 
 
 class CLIValidation(unittest.TestCase):
+    def test_unicode_arguments(self):
+        value = "\u00e9\u062f\u8a2d"
+        p = subprocess.run(EMULATOR + [CLI, "--parity", value], capture_output=True, timeout=5)
+        self.assertEqual(p.returncode, 2)
+        self.assertIn(value.encode("utf-8"), p.stderr)
+
     def test_invalid_options(self):
         for args in (["--baud", "0"], ["--baud", "115200junk"], ["--vid", "xyz"],
                      ["--data-bits", "9"], ["--reconnect", "0"], ["--parity", ""],
