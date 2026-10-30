@@ -80,7 +80,7 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/socketio" --ignore-scripts --no-audit --no-fund socket.io-client@4.8.1
           node tests/socketio_client.mjs "$RUNNER_TEMP/socketio" build/network_echo
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: SerialUART-${{ matrix.target }}-${{ matrix.linkage }}
           path: |
@@ -108,7 +108,7 @@ jobs:
           cpack -G ZIP -B ../dist -D CPACK_PACKAGE_FILE_NAME=SerialUART-linux-armv7-gcc-static
           cd ..
           python3 tools/checksums.py dist
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: SerialUART-linux-armv7-gcc-static
           path: |
@@ -159,7 +159,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           pattern: SerialUART-*
           path: incoming
