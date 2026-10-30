@@ -222,15 +222,26 @@ class SerialPTY(unittest.TestCase):
         data = bytes(range(256)) * 100
         stop = threading.Event()
         errors = []
+        # A blocking master write can remain stuck after the CLI closes on macOS,
+        # preventing even close(master) in another thread from finishing.
+        os.set_blocking(master, False)
 
         def board():
+            pending = bytearray()
             try:
                 while not stop.is_set():
-                    if select.select([master], [], [], 0.05)[0]:
-                        b = os.read(master, 4096)
-                        while b:
-                            n = os.write(master, b)
-                            b = b[n:]
+                    readable, writable, _ = select.select([master], [master] if pending else [], [], 0.01)
+                    if readable:
+                        try:
+                            pending.extend(os.read(master, 4096))
+                        except BlockingIOError:
+                            pass
+                    if writable:
+                        try:
+                            n = os.write(master, pending)
+                            del pending[:n]
+                        except BlockingIOError:
+                            pass
             except OSError as exc:
                 if not stop.is_set():
                     errors.append(exc)
