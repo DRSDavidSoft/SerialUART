@@ -83,7 +83,9 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: SerialUART-${{ matrix.target }}-${{ matrix.linkage }}
-          path: dist/*
+          path: |
+            dist/*.zip
+            dist/*.sha256
           if-no-files-found: error
           retention-days: 14
   armv7:
@@ -109,7 +111,9 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: SerialUART-linux-armv7-gcc-static
-          path: dist/*
+          path: |
+            dist/*.zip
+            dist/*.sha256
           if-no-files-found: error
   sanitizers:
     name: Address and undefined behavior sanitizers
