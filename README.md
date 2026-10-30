@@ -62,6 +62,9 @@ The program is `build/SendCommand` on Unix and usually
 shared libraries, direct compiler commands, and Raspberry Pi cross compilation.
 Python 3 is used only for optional integration tests and release tooling.
 
+GitHub Actions is the sole CI/CD service for all platform builds, tests,
+downloadable packages, and attested draft releases.
+
 ## Platform evidence
 
 | Platform | Automated coverage | Native dependencies |
