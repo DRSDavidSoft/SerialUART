@@ -11,6 +11,17 @@ Website: www.Refoua.me
 
 Changelog:
 
+v2.1.0
+======
++ Apply the historical serial reference audit; preserve a source-by-source ledger.
++ Retain native open errors; read driver configuration, modem status and optional Linux counters.
++ Add bounded TX queue waits, explicit discard and binary delimiter reads with total deadlines.
+* Harden POSIX ownership/cleanup and inherited parity/flow-control flags.
++ Add Linux custom baud with termios2 readback/restoration and sysfs-based discovery.
++ Add sendline/until/diagnostic CLI options and a counting-pattern loopback tool.
++ Verify GNU Make and NMake entry points in GitHub Actions.
+* Extend PTY, corruption, deadline, native API and installation checks.
+
 v2.0
   TBA
 

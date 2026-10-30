@@ -30,12 +30,17 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 | Arduino reset control | [DTR and Arduino](docs/USAGE.md#arduino-and-dtr) |
 | TCP, WebSocket, or Socket.IO bridge | [Host adapters](docs/NETWORK.md) |
 | Build packages and draft releases | [CI/CD and validation](docs/BUILDING.md#cicd) |
+| Test a loopback or byte-exact echo device | [Counting-pattern integrity test](docs/USAGE.md#counting-pattern-loopback) |
+| See how the historical references shaped the implementation | [Source-by-source audit](docs/REFERENCE-AUDIT.md) |
 
 ## Capabilities
 
 - C99 API, C++ linkage, static libraries and shared libraries for bindings.
 - Windows `CreateFile`/DCB and POSIX `termios`, with baud, data bits, parity,
   stop bits, DTR, RTS, RTS/CTS, timeouts, partial I/O and break control.
+- Retained native open errors, driver configuration and modem readback,
+  explicit buffer discard, bounded TX queue waits, POSIX ownership, and Linux
+  custom numeric baud rates and optional driver error counters.
 - Friendly names and USB VID/PID/serial discovery through SetupAPI on Windows,
   sysfs on Linux, and IOKit on macOS. Enumeration never opens a port.
 - Selection by exact path, exact name, VID/PID, serial number, or combined filters.
@@ -43,6 +48,8 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 - Automatic serial reconnect with fresh discovery and explicit DTR policy.
 - Raw terminal with prefix shortcuts; binary-safe stdin/stdout pipelines;
   one-shot text and hex commands with configurable reply timeout.
+- LF-terminated commands, binary delimiter reads with total deadlines, and an
+  independent counting-pattern loopback tool with corruption detection.
 - Optional one-peer TCP, WebSocket and Socket.IO bridge examples, built into
   the CLI. Network code is separate from the serial library.
 

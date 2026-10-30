@@ -262,9 +262,9 @@ int main(int argc,char **argv) {
             else if(!strcmp(v,"reset")) c.dtr=SUART_DTR_RESET;
             else ok=0;
         }
-        else if(!strcmp(a,"--send") || !strcmp(a,"-s")) send_text=v;
-        else if(!strcmp(a,"--sendline")) { send_text=v; newline=1; }
-        else if(!strcmp(a,"--hex")) hex=v;
+        else if(!strcmp(a,"--send") || !strcmp(a,"-s")) { if(send_text || hex) ok=0; send_text=v; }
+        else if(!strcmp(a,"--sendline")) { if(send_text || hex) ok=0; send_text=v; newline=1; }
+        else if(!strcmp(a,"--hex")) { if(send_text || hex) ok=0; hex=v; }
         else if(!strcmp(a,"--origin")) origin=v;
         else if(!strcmp(a,"--listen") || !strcmp(a,"--connect")) {
             if(mode || i+2>=argc) { ok=0; break; }

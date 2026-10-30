@@ -17,7 +17,8 @@ extern "C" {
 #define SUART_VERSION "2.1.0"
 typedef struct suart_port suart_port;
 enum { SUART_OK=0, SUART_ERROR=-1, SUART_INVALID=-2, SUART_NOT_FOUND=-3,
-       SUART_AMBIGUOUS=-4, SUART_UNSUPPORTED=-5, SUART_TIMEOUT=-6 };
+       SUART_AMBIGUOUS=-4, SUART_UNSUPPORTED=-5, SUART_TIMEOUT=-6,
+       SUART_BUFFER_FULL=-7 };
 typedef enum { SUART_DTR_KEEP, SUART_DTR_OFF, SUART_DTR_ON, SUART_DTR_RESET } suart_dtr;
 typedef struct {
     unsigned baud, data_bits;
@@ -71,6 +72,10 @@ SUART_API int suart_get_counters(suart_port *, suart_counters *);
 /* Zero actual bytes with OK means timeout. timeout_ms <= 60000.
  * Writes may be partial; never replay bytes of uncertain delivery. */
 SUART_API int suart_read(suart_port *, void *, size_t, size_t *actual, unsigned timeout_ms);
+/* Binary delimiter read: includes terminator, appends no NUL, never reads past
+ * terminator. Total deadline, TIMEOUT or BUFFER_FULL preserve partial bytes.
+ * capacity must be nonzero. Reuse a handle for successive transactions. */
+SUART_API int suart_read_until(suart_port *, void *, size_t, size_t *actual, unsigned char terminator, unsigned timeout_ms);
 SUART_API int suart_write(suart_port *, const void *, size_t, size_t *actual, unsigned timeout_ms);
 SUART_API int suart_set_dtr(suart_port *, int);
 SUART_API int suart_set_rts(suart_port *, int);

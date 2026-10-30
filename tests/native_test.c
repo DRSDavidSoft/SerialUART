@@ -41,6 +41,13 @@ int main(int argc,char **argv) {
     do { CHECK(!ioctl(slave,FIONREAD,&available)); if(available>=7) break; suart_sleep(1); } while(suart_millis()<end);
     CHECK(available==7 && !suart_discard(p,SUART_RX));
     CHECK(!suart_read(p,b,sizeof(b),&n,10) && !n);
+    CHECK(write(master,"A\0\nrest",7)==7);
+    CHECK(!suart_read_until(p,b,3,&n,'\n',1000) && n==3 && !memcmp(b,"A\0\n",3));
+    CHECK(suart_read_until(p,b,2,&n,'\n',100)==SUART_BUFFER_FULL && n==2 && !memcmp(b,"re",2));
+    CHECK(!suart_read(p,b,2,&n,100) && n==2 && !memcmp(b,"st",2));
+    b[0]=42;
+    CHECK(suart_read_until(p,b,0,&n,'\n',100)==SUART_INVALID && !n && b[0]==42);
+    CHECK(suart_read_until(p,b,sizeof(b),&n,'\n',10)==SUART_TIMEOUT && !n);
     CHECK(suart_discard(p,0)==SUART_INVALID);
     CHECK(suart_wait_tx(p,60001)==SUART_INVALID);
     memset(&modem,255,sizeof(modem));

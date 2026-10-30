@@ -19,6 +19,7 @@ device must exist. Do not rely on that on a machine with multiple serial ports.
 ```sh
 SendCommand -p COM12 -b 115200 --send STATUS
 SendCommand -p /dev/ttyUSB0 --hex "53 54 41 54 55 53 0D 0A" --timeout 2000
+SendCommand -p /dev/ttyACM0 --sendline STATUS --until 0A --timeout 2000
 ```
 
 Text is sent exactly as supplied; no newline is added. Hex input accepts pairs
@@ -28,6 +29,25 @@ bytes arrive for `--timeout` milliseconds (default 1000). Any response yields
 exit 0 after idle; no response yields 124. This is an idle deadline, so a device
 that sends continuously can keep a command session open. The caller can impose
 an overall deadline when needed.
+
+`--sendline` appends LF to text. `--until HEX` includes the first matching reply
+byte and exits immediately; use `0A` for LF, `0D` for CR, or `00` for NUL.
+With this option, `--timeout` is a **total reply deadline**, even if bytes arrive
+continuously. Missing terminators return 124 with partial bytes preserved on
+stdout. It works with `--send`, `--sendline`, `--hex`, or `--receive`.
+Only one command is accepted per CLI invocation; use one library handle for
+multiple command/response transactions without reopening the device.
+
+`--write-timeout MS` bounds each write-all operation and the TX queue wait
+(default 2000, range 1..60000). The CLI waits for the driver's queue before a
+normal close and before starting the stdin-EOF idle wait. A stalled queue is an
+I/O failure, with uncertain delivery; commands are not replayed. Queue completion
+does not prove target acknowledgement. Native driver close delays may still occur.
+`--discard-input` explicitly discards RX bytes after each successful open,
+including reconnects. It is destructive and disabled by default.
+
+Use `--show-config` for driver settings and modem status on stderr. Unknown
+signals remain unavailable. It leaves stdout suitable for binary capture.
 
 ## Binary pipes
 
@@ -67,7 +87,8 @@ keys to ANSI sequences. To send arbitrary non-UTF-8 bytes, use pipes/hex mode.
 | Ctrl+] then `?` | Show shortcuts on stderr |
 | Ctrl+] then `q` | Quit and restore terminal |
 | Ctrl+] then `b` | Send a 250 ms serial break |
-| Ctrl+] then `d` | Pulse DTR low 100 ms, then high |
+| Ctrl+] then `d` | Deassert DTR for 100 ms, then assert |
+| Ctrl+] then `m` | Show driver configuration and modem status |
 | Ctrl+] then `]` | Send a literal Ctrl+] byte |
 | Ctrl+C | Send byte 03 to the device in terminal mode |
 
@@ -82,12 +103,14 @@ termination cannot run cleanup. POSIX users can recover with `stty sane`.
 # Deliberately reset and wait for bootloader/application startup:
 SendCommand -p COM12 -b 115200 --dtr reset --boot-wait 2000 --send STATUS
 
-# Avoid intentional reset pulses; keep control low:
+# Avoid an intentional reset pulse; request DTR deasserted:
 SendCommand -p /dev/ttyACM0 -b 115200 --dtr off --terminal
 ```
 
-`keep` leaves the driver's current DTR policy alone; `off` requests low; `on`
-requests high; `reset` requests low for 100 ms then high. Boot wait applies after
+`keep` leaves the driver's current DTR policy alone; `off` deasserts; `on`
+asserts; `reset` deasserts for 100 ms then asserts. These are **logical modem
+states**, not electrical voltage promises: a converter's DTR output can be
+active low. Boot wait applies after
 every successful open. Reset therefore also occurs after reconnect if selected.
 The application does not flush incoming startup bytes silently.
 
@@ -100,6 +123,31 @@ driver. PTYs cannot verify DTR, RTS or electrical timing.
 
 The [Arduino echo sketch](../examples/arduino_echo/arduino_echo.ino) is useful for
 binary transfer checks. Select its configured 115200 baud and allow for startup.
+
+Native USB boards such as Leonardo/Zero can use a 1200-bps bootloader touch with
+USB re-enumeration. This differs from a USB-to-UART bridge's DTR reset;
+`--dtr reset` is not a firmware uploader or an implementation of that touch.
+For strict auto-reset prevention, follow the actual board's schematic and
+documented reset-enable mechanism. A software setting cannot promise that result.
+
+## Counting-pattern loopback
+
+On a dedicated TX-to-RX loopback or a byte-exact echo device:
+
+```sh
+SerialLoopback /dev/serial0 115200 65536 10000
+SerialLoopback COM12 115200 65536 10000
+```
+
+Arguments are port, baud, byte count and total timeout. Defaults are 115200,
+65536 and 10000ms; maxima are 4000000, 1048576 and 60000. The tool checks all byte
+values followed by a deterministic varying pattern, exact receive counts and
+contents, and optional Linux driver error deltas. It keeps in-flight data bounded
+and handles partial writes. Exit 0 means integrity passed, 1 means I/O/corruption,
+2 means usage error, and 124 means timeout. Counters unavailable on a driver are
+reported explicitly. It does not pulse DTR or implicitly purge startup bytes;
+prepare an echo device before starting the test. Physical results require an
+actual cable/board and do not follow from PTY success.
 
 ## Reconnect and errors
 

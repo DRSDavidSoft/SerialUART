@@ -17,6 +17,13 @@ Run `ctest --test-dir build -C Release --output-on-failure` after building.
 - Official Socket.IO 4.8.1 client binary exchange and 46-second heartbeat session.
 - Installed CMake consumer compilation/link/execution, per native platform.
 - ARMv7 cross-compiled binaries execute under QEMU; this is emulation evidence.
+- Native PTY ownership conflict/reopen, error retention, inherited flag cleanup,
+  explicit RX discard, binary delimiter reads and zero-capacity boundaries.
+- Linux custom rate readback and restoration, including 31250 and 23977 baud.
+- Linux sysfs fixtures with uncommon UART names, USB ancestors and non-devices.
+- 64 KiB fragmented counting-pattern loopback, corrupt echo rejection and silent
+  peer timeout; delimiter deadlines under continuous unterminated input.
+- GNU Make entry point on Linux/macOS and NMake entry point on Windows.
 
 Python's standard library drives integration tests. Windows skips PTY-specific
 tests and runs the real socket tests. No test opens arbitrary physical COM ports.
@@ -38,6 +45,14 @@ model/firmware and observed result. Keep this checklist open until measured:
 - [ ] Physical Raspberry Pi GPIO UART and USB serial verified separately.
 - [ ] Network bridge reconnects after peer loss while the real serial device stays open.
 - [ ] Long transfer/soak with slow consumers and physical flow control checked for loss.
+- [ ] With RTS/CTS wired, hold CTS inactive: verify write/TX queue timeout and
+  native close behavior, then restore CTS and record what was actually delivered.
+- [ ] Compare `--show-config` and modem known/asserted bits with native tools
+  and measured signals; distinguish assertion from pin voltage.
+- [ ] Run `SerialLoopback` on physical Windows, Pi USB and Pi GPIO interfaces;
+  record counts, mismatch totals and available driver error deltas.
+- [ ] Verify nonstandard baud on a scope/analyzer; driver readback alone is
+  not an independent baud-frequency measurement.
 
 Build, package and virtual serial success do not close electrical/reset/driver,
 physical Pi, Windows serial-device or human terminal acceptance items.

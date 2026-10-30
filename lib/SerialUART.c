@@ -157,7 +157,7 @@ int suart_open_ex(suart_port **out,const char *path,const suart_config *c,unsign
     if(error) *error=0;
     if(!out) return SUART_INVALID;
     *out=NULL;
-    if(!path || !*path || !c || !c->baud || c->data_bits<5 || c->data_bits>8 ||
+    if(!path || !*path || strlen(path)>=1000 || !c || !c->baud || c->data_bits<5 || c->data_bits>8 ||
        !c->parity || !strchr("NEO",c->parity) || c->stop_bits<1 || c->stop_bits>2 ||
        c->dtr<SUART_DTR_KEEP || c->dtr>SUART_DTR_RESET || c->boot_wait_ms>60000) return SUART_INVALID;
 #if !defined(_WIN32) && !defined(__linux__)
@@ -175,10 +175,13 @@ int suart_open_ex(suart_port **out,const char *path,const suart_config *c,unsign
     p->rts_cts=c->rts_cts!=0;
 #ifdef _WIN32
     {
-        DCB d; COMMTIMEOUTS t; char native[1024];
+        DCB d; COMMTIMEOUTS t; char native[1024]; WCHAR wide[1024];
         if(_strnicmp(path,"COM",3)==0) snprintf(native,sizeof(native),"\\\\.\\%s",path);
         else snprintf(native,sizeof(native),"%s",path);
-        p->fd=CreateFileA(native,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
+        if(!MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,native,-1,wide,1024)) {
+            fail(p); if(error) *error=p->error; free(p); return SUART_ERROR;
+        }
+        p->fd=CreateFileW(wide,GENERIC_READ|GENERIC_WRITE,0,NULL,OPEN_EXISTING,0,NULL);
         if(p->fd==INVALID_HANDLE_VALUE) { fail(p); if(error) *error=p->error; free(p); return SUART_ERROR; }
         memset(&d,0,sizeof(d)); d.DCBlength=sizeof(d);
         if(!GetCommState(p->fd,&d)) goto bad;
@@ -316,6 +319,23 @@ static int io_bytes(suart_port *p,void *buf,size_t cap,size_t *done,unsigned ms,
     return SUART_OK;
 }
 int suart_read(suart_port *p,void *b,size_t n,size_t *d,unsigned ms) { return io_bytes(p,b,n,d,ms,0); }
+int suart_read_until(suart_port *p,void *buffer,size_t cap,size_t *done,unsigned char terminator,unsigned ms) {
+    unsigned char *b=(unsigned char *)buffer; uint64_t end;
+    if(done) *done=0;
+    if(!p || !b || !done || !cap || cap>INT_MAX || ms>60000) return SUART_INVALID;
+    end=suart_millis()+ms;
+    do {
+        uint64_t now=suart_millis(); size_t n=0; int rc;
+        rc=suart_read(p,b+*done,1,&n,(unsigned)(now<end?end-now:0));
+        if(n) {
+            ++*done;
+            if(b[*done-1]==terminator) return SUART_OK;
+        }
+        if(rc!=SUART_OK) return rc;
+        if(*done==cap) return SUART_BUFFER_FULL;
+    } while(suart_millis()<end);
+    return SUART_TIMEOUT;
+}
 int suart_write(suart_port *p,const void *b,size_t n,size_t *d,unsigned ms) { return io_bytes(p,(void *)b,n,d,ms,1); }
 int suart_discard(suart_port *p,unsigned queues) {
     if(!p || !queues || (queues & ~(SUART_RX|SUART_TX))) return SUART_INVALID;
@@ -481,7 +501,10 @@ static CFTypeRef property(io_registry_entry_t e,CFStringRef key) {
 }
 static void cftext(io_registry_entry_t e,CFStringRef key,char *out,size_t n) {
     CFTypeRef v=property(e,key);
-    if(v) { if(CFGetTypeID(v)==CFStringGetTypeID()) CFStringGetCString((CFStringRef)v,out,(CFIndex)n,kCFStringEncodingUTF8); CFRelease(v); }
+    if(v) {
+        if(CFGetTypeID(v)==CFStringGetTypeID() && !CFStringGetCString((CFStringRef)v,out,(CFIndex)n,kCFStringEncodingUTF8)) out[0]=0;
+        CFRelease(v);
+    }
 }
 static unsigned cfnumber(io_registry_entry_t e,CFStringRef key) {
     int num=0; CFTypeRef v=property(e,key);
