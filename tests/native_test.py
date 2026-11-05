@@ -148,7 +148,7 @@ class Native(unittest.TestCase):
             devroot.mkdir()
             usb = root / "usb"
             (usb / "interface").mkdir(parents=True)
-            for key, value in {"idVendor": "2341", "idProduct": "0043", "product": "Fixture board", "serial": "ABC"}.items():
+            for key, value in {"idVendor": "2341", "idProduct": "0043", "manufacturer": "Fixture maker", "product": "Fixture board", "serial": "ABC"}.items():
                 (usb / key).write_text(value + "\n")
             for name in ("ttyO7", "customUART9", "ttyNotADevice"):
                 (sysroot / name).mkdir()

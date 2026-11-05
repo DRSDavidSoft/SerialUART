@@ -12,11 +12,14 @@ Linux, Raspberry Pi OS, and macOS. Use the C ABI from C++, a language binding, o
 the included `SendCommand` executable. The library and CLI use the C runtime and
 native OS APIs; they require no third-party serial, USB, networking, or JSON libraries.
 
-![Illustrative terminal preview](docs/terminal.svg)
+![Serial console replay with fixture device metadata](docs/console.svg)
+
+*Console replay uses simulated metadata; it is not a hardware capture.*
 
 ## Start here
 
 ```sh
+SendCommand --tui
 SendCommand --list
 SendCommand --port COM12 --baud 115200 --send STATUS
 SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
@@ -26,6 +29,7 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 |---|---|
 | A library for an application or binding | [C API and C++ usage](docs/API.md) |
 | Build, install, or cross-compile | [Build guide](docs/BUILDING.md) |
+| Interactive menus, editable settings and history | [Serial workspace](docs/CONSOLE.md) |
 | A serial terminal or binary pipeline | [CLI guide](docs/USAGE.md) |
 | Arduino reset control | [DTR and Arduino](docs/USAGE.md#arduino-and-dtr) |
 | TCP, WebSocket, or Socket.IO bridge | [Host adapters](docs/NETWORK.md) |
@@ -42,6 +46,10 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 - Retained native open errors, driver configuration and modem readback,
   explicit buffer discard, bounded TX queue waits, POSIX ownership, and Linux
   custom numeric baud rates and optional driver error counters.
+- PortableShell menus, searchable port picker, inline settings, receive/hex history,
+  modem controls and a raw terminal in the opt-in `--tui` workspace.
+- Extended device identities, manufacturer/product, location and present-device
+  Windows problem codes, with `--list-json`, `--list-details`, `--instance`, `--match`.
 - Friendly names and USB VID/PID/serial discovery through SetupAPI on Windows,
   sysfs on Linux, and IOKit on macOS. Enumeration never opens a port.
 - Selection by exact path, exact name, VID/PID, serial number, or combined filters.

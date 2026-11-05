@@ -10,6 +10,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <setupapi.h>
+#include <cfgmgr32.h>
 #include <initguid.h>
 #include <devguid.h>
 #else
@@ -474,15 +475,15 @@ int suart_send_break(suart_port *p,unsigned ms) {
 static void utf8(const WCHAR *w,char *out,size_t n) {
     if(!WideCharToMultiByte(CP_UTF8,0,w,-1,out,(int)n,NULL,NULL)) out[0]=0;
 }
-int suart_enumerate(suart_device_fn cb,void *ctx) {
+int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
     HDEVINFO set; SP_DEVINFO_DATA info; DWORD i;
     if(!cb) return SUART_INVALID;
     set=SetupDiGetClassDevsW(&GUID_DEVCLASS_PORTS,NULL,NULL,DIGCF_PRESENT);
     if(set==INVALID_HANDLE_VALUE) return SUART_ERROR;
     memset(&info,0,sizeof(info)); info.cbSize=sizeof(info);
     for(i=0;SetupDiEnumDeviceInfo(set,i,&info);++i) {
-        suart_device d; HKEY key; WCHAR text[512]; DWORD len=sizeof(text),type;
-        memset(&d,0,sizeof(d));
+        suart_device d; suart_device_info detail; HKEY key; WCHAR text[512]; DWORD len=sizeof(text),type;
+        memset(&d,0,sizeof(d)); memset(&detail,0,sizeof(detail));
         key=SetupDiOpenDevRegKey(set,&info,DICS_FLAG_GLOBAL,0,DIREG_DEV,KEY_READ);
         if(key==INVALID_HANDLE_VALUE) continue;
         if(RegQueryValueExW(key,L"PortName",NULL,&type,(BYTE *)text,&len)!=ERROR_SUCCESS) { RegCloseKey(key); continue; }
@@ -491,17 +492,40 @@ int suart_enumerate(suart_device_fn cb,void *ctx) {
         if(SetupDiGetDeviceRegistryPropertyW(set,&info,SPDRP_FRIENDLYNAME,NULL,(BYTE *)text,sizeof(text),NULL)) {
             text[511]=0; utf8(text,d.name,sizeof(d.name));
         } else snprintf(d.name,sizeof(d.name),"%s",d.path);
-        if(SetupDiGetDeviceRegistryPropertyW(set,&info,SPDRP_HARDWAREID,NULL,(BYTE *)text,sizeof(text),NULL)) {
-            char id[2048],*v,*p; text[511]=0; utf8(text,id,sizeof(id));
-            v=strstr(id,"VID_"); p=strstr(id,"PID_");
-            if(v) d.vid=(unsigned)strtoul(v+4,NULL,16);
-            if(p) d.pid=(unsigned)strtoul(p+4,NULL,16);
+        {
+            DEVINST node=info.DevInst; unsigned depth; ULONG status=0,problem=0;
+            if(CM_Get_DevNode_Status(&status,&problem,node,0)==CR_SUCCESS) {
+                detail.problem_known=1; detail.problem_code=(status&DN_HAS_PROBLEM)?problem:0;
+            }
+            if(SetupDiGetDeviceRegistryPropertyW(set,&info,SPDRP_DEVICEDESC,NULL,(BYTE *)text,sizeof(text),NULL)) {
+                text[511]=0; utf8(text,detail.product,sizeof(detail.product));
+            }
+            if(SetupDiGetDeviceRegistryPropertyW(set,&info,SPDRP_MFG,NULL,(BYTE *)text,sizeof(text),NULL)) {
+                text[511]=0; utf8(text,detail.manufacturer,sizeof(detail.manufacturer));
+            }
+            if(SetupDiGetDeviceRegistryPropertyW(set,&info,SPDRP_LOCATION_INFORMATION,NULL,(BYTE *)text,sizeof(text),NULL)) {
+                text[511]=0; utf8(text,detail.location,sizeof(detail.location));
+            }
+            for(depth=0;depth<8;++depth) {
+                DEVINST parent; char id[2048],*v,*q,*tail;
+                if(CM_Get_Device_IDW(node,text,512,0)!=CR_SUCCESS) break;
+                text[511]=0; utf8(text,id,sizeof(id));
+                if(!depth) snprintf(detail.instance_id,sizeof(detail.instance_id),"%.1023s",id);
+                v=strstr(id,"VID_"); q=strstr(id,"PID_");
+                if(!d.vid && v && q) {
+                    char value[5]; memcpy(value,v+4,4); value[4]=0; d.vid=(unsigned)strtoul(value,NULL,16);
+                    memcpy(value,q+4,4); d.pid=(unsigned)strtoul(value,NULL,16);
+                }
+                if(!strncmp(id,"USB\\",4)) {
+                    detail.is_usb=1; tail=strrchr(id,'\\');
+                    if(!d.serial[0] && tail && !strchr(tail+1,'&')) snprintf(d.serial,sizeof(d.serial),"%.255s",tail+1);
+                }
+                if(CM_Get_Parent(&parent,node,0)!=CR_SUCCESS) break;
+                node=parent;
+            }
         }
-        if(SetupDiGetDeviceInstanceIdW(set,&info,text,512,NULL)) {
-            char id[2048],*tail; text[511]=0; utf8(text,id,sizeof(id)); tail=strrchr(id,'\\');
-            if(d.vid && !strncmp(id,"USB\\",4) && tail && !strchr(tail+1,'&')) snprintf(d.serial,sizeof(d.serial),"%.255s",tail+1);
-        }
-        if(cb(&d,ctx)) break;
+        detail.device=d;
+        if(cb(&detail,ctx)) break;
     }
     SetupDiDestroyDeviceInfoList(set); return SUART_OK;
 }
@@ -520,37 +544,44 @@ static unsigned cfnumber(io_registry_entry_t e,CFStringRef key) {
     int num=0; CFTypeRef v=property(e,key);
     if(v) { if(CFGetTypeID(v)==CFNumberGetTypeID()) CFNumberGetValue((CFNumberRef)v,kCFNumberIntType,&num); CFRelease(v); } return (unsigned)num;
 }
-int suart_enumerate(suart_device_fn cb,void *ctx) {
+int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
     io_iterator_t iter; io_object_t obj; if(!cb) return SUART_INVALID;
     if(IOServiceGetMatchingServices(kIOMainPortDefault,IOServiceMatching(kIOSerialBSDServiceValue),&iter)!=KERN_SUCCESS) return SUART_ERROR;
     while((obj=IOIteratorNext(iter))) {
-        suart_device d; memset(&d,0,sizeof(d));
+        suart_device_info detail; suart_device d; io_string_t registry_path;
+        memset(&d,0,sizeof(d)); memset(&detail,0,sizeof(detail));
         cftext(obj,CFSTR(kIOCalloutDeviceKey),d.path,sizeof(d.path));
         cftext(obj,CFSTR("USB Product Name"),d.name,sizeof(d.name));
         cftext(obj,CFSTR("USB Serial Number"),d.serial,sizeof(d.serial));
         d.vid=cfnumber(obj,CFSTR("idVendor")); d.pid=cfnumber(obj,CFSTR("idProduct"));
         if(!d.name[0]) snprintf(d.name,sizeof(d.name),"%s",d.path);
-        IOObjectRelease(obj); if(d.path[0] && cb(&d,ctx)) break;
+        cftext(obj,CFSTR("USB Vendor Name"),detail.manufacturer,sizeof(detail.manufacturer));
+        snprintf(detail.product,sizeof(detail.product),"%s",d.name);
+        detail.is_usb=d.vid!=0;
+        if(IORegistryEntryGetPath(obj,kIOServicePlane,registry_path)==KERN_SUCCESS)
+            snprintf(detail.instance_id,sizeof(detail.instance_id),"%.1023s",registry_path);
+        if(detail.is_usb) snprintf(detail.location,sizeof(detail.location),"USB location 0x%08X",cfnumber(obj,CFSTR("locationID")));
+        detail.device=d; IOObjectRelease(obj); if(d.path[0] && cb(&detail,ctx)) break;
     }
     IOObjectRelease(iter); return SUART_OK;
 }
 #elif defined(__linux__)
-int suart_enumerate(suart_device_fn cb,void *ctx) {
-    return suart_linux_enumerate_at("/sys/class/tty","/dev",cb,ctx);
+int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
+    return suart_linux_enumerate_ex_at("/sys/class/tty","/dev",cb,ctx);
 }
 #else
-int suart_enumerate(suart_device_fn cb,void *ctx) {
+int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
     glob_t g; size_t i; int rc;
     if(!cb) return SUART_INVALID;
     memset(&g,0,sizeof(g)); rc=glob("/dev/tty[A-Za-z]*",0,NULL,&g);
     if(rc!=0 && rc!=GLOB_NOMATCH) { globfree(&g); return SUART_ERROR; }
     for(i=0;i<g.gl_pathc;++i) {
-        suart_device d; const char *base=strrchr(g.gl_pathv[i],'/');
+        suart_device_info detail; suart_device d; const char *base=strrchr(g.gl_pathv[i],'/');
         if(!base || !(strncmp(base+1,"ttyUSB",6)==0 || strncmp(base+1,"ttyACM",6)==0 ||
            strncmp(base+1,"ttyS",4)==0 || strncmp(base+1,"ttyAMA",6)==0 || strncmp(base+1,"ttyTHS",6)==0)) continue;
         memset(&d,0,sizeof(d)); snprintf(d.path,sizeof(d.path),"%s",g.gl_pathv[i]);
         if(!d.name[0]) snprintf(d.name,sizeof(d.name),"%s",base+1);
-        if(cb(&d,ctx)) break;
+        memset(&detail,0,sizeof(detail)); detail.device=d; if(cb(&detail,ctx)) break;
     }
     globfree(&g); return SUART_OK;
 }
@@ -587,5 +618,79 @@ int suart_resolve(const suart_selector *s,suart_device *d) {
     rc=suart_enumerate(match,&m); if(rc) return rc;
     if(!m.count) return SUART_NOT_FOUND;
     if(m.count>1) return SUART_AMBIGUOUS;
+    *d=m.d; return SUART_OK;
+}
+
+/* The original discovery API retains its structure size and callback contract. */
+typedef struct { suart_device_fn fn; void *ctx; } legacy_discovery;
+static int legacy_device(const suart_device_info *d,void *ctx) {
+    legacy_discovery *c=(legacy_discovery *)ctx; return c->fn(&d->device,c->ctx);
+}
+int suart_enumerate(suart_device_fn cb,void *ctx) {
+    legacy_discovery c; if(!cb) return SUART_INVALID; c.fn=cb; c.ctx=ctx;
+    return suart_enumerate_ex(legacy_device,&c);
+}
+const char *suart_discovery_source(void) {
+#ifdef _WIN32
+    return "Windows present SetupAPI Ports / Configuration Manager";
+#elif defined(__linux__)
+    return "Linux sysfs tty device / USB ancestors";
+#elif defined(__APPLE__)
+    return "macOS IOKit serial callout / USB ancestors";
+#else
+    return "POSIX device paths";
+#endif
+}
+static int text_contains(const char *text,const char *needle) {
+    size_t i;
+    for(;*text;++text) {
+        for(i=0;needle[i] && text[i];++i) {
+            unsigned a=(unsigned char)text[i],b=(unsigned char)needle[i];
+            if(a>='A' && a<='Z') a+='a'-'A';
+            if(b>='A' && b<='Z') b+='a'-'A';
+            if(a!=b) break;
+        }
+        if(!needle[i]) return 1;
+    }
+    return !*needle;
+}
+int suart_device_matches(const suart_selector_ex *s,const suart_device_info *i) {
+    const suart_device *d; if(!s || !i || s->device.vid>65535 || s->device.pid>65535) return 0;
+    d=&i->device;
+    if(s->device.path && !same_path(s->device.path,d->path)) return 0;
+    if(s->device.name && strcmp(s->device.name,d->name)) return 0;
+    if(s->device.serial && strcmp(s->device.serial,d->serial)) return 0;
+    if(s->device.vid && s->device.vid!=d->vid) return 0;
+    if(s->device.pid && s->device.pid!=d->pid) return 0;
+    if(s->instance_id) {
+#ifdef _WIN32
+        if(_stricmp(s->instance_id,i->instance_id)) return 0;
+#else
+        if(strcmp(s->instance_id,i->instance_id)) return 0;
+#endif
+    }
+    if(s->match && !text_contains(d->path,s->match) && !text_contains(d->name,s->match) &&
+       !text_contains(d->serial,s->match) && !text_contains(i->manufacturer,s->match) &&
+       !text_contains(i->product,s->match) && !text_contains(i->instance_id,s->match)) return 0;
+    return 1;
+}
+typedef struct { const suart_selector_ex *s; suart_device_info d; unsigned count; } extended_match;
+static int extended_device(const suart_device_info *d,void *ctx) {
+    extended_match *m=(extended_match *)ctx;
+    if(!suart_device_matches(m->s,d)) return 0;
+    m->d=*d; return ++m->count>1;
+}
+int suart_resolve_ex(const suart_selector_ex *s,suart_device_info *d) {
+    extended_match m; int rc;
+    if(!s || !d || s->device.vid>65535 || s->device.pid>65535) return SUART_INVALID;
+    memset(&m,0,sizeof(m)); m.s=s; rc=suart_enumerate_ex(extended_device,&m);
+    if(rc) return rc;
+    if(m.count>1) return SUART_AMBIGUOUS;
+    if(!m.count) {
+        if(s->device.path && !s->device.name && !s->device.serial && !s->device.vid && !s->device.pid && !s->instance_id && !s->match) {
+            memset(d,0,sizeof(*d)); return suart_resolve(&s->device,&d->device);
+        }
+        return SUART_NOT_FOUND;
+    }
     *d=m.d; return SUART_OK;
 }

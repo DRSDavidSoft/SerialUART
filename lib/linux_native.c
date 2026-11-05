@@ -71,17 +71,18 @@ static void filetext(const char *dir,const char *key,char *out,size_t n) {
     if(fgets(out,(int)n,f)) out[strcspn(out,"\r\n")]=0;
     fclose(f);
 }
-int suart_linux_enumerate_at(const char *sys,const char *dev,suart_device_fn cb,void *ctx) {
+int suart_linux_enumerate_ex_at(const char *sys,const char *dev,suart_device_info_fn cb,void *ctx) {
     DIR *dir; struct dirent *entry;
     if(!sys || !dev || !cb) return SUART_INVALID;
     dir=opendir(sys); if(!dir) return SUART_ERROR;
     while((entry=readdir(dir))) {
-        char path[PATH_MAX],real[PATH_MAX]; struct stat st; suart_device d;
+        char path[PATH_MAX],real[PATH_MAX]; struct stat st; suart_device_info info; suart_device d;
         if(entry->d_name[0]=='.') continue;
         /* A hardware-backed tty has a device association. Never open the
          * device to probe UART type: even an open may reset a board. */
         if(snprintf(path,sizeof(path),"%s/%s/device",sys,entry->d_name)>=(int)sizeof(path) || !realpath(path,real)) continue;
-        memset(&d,0,sizeof(d));
+        memset(&d,0,sizeof(d)); memset(&info,0,sizeof(info));
+        snprintf(info.instance_id,sizeof(info.instance_id),"%.1023s",real);
         if(snprintf(d.path,sizeof(d.path),"%s/%s",dev,entry->d_name)>=(int)sizeof(d.path)) continue;
         if(stat(d.path,&st)<0 || !S_ISCHR(st.st_mode)) continue;
         for(;;) {
@@ -90,13 +91,26 @@ int suart_linux_enumerate_at(const char *sys,const char *dev,suart_device_fn cb,
             if(value[0]) {
                 d.vid=(unsigned)strtoul(value,NULL,16); value[0]=0;
                 filetext(real,"idProduct",value,sizeof(value)); d.pid=(unsigned)strtoul(value,NULL,16);
-                filetext(real,"product",d.name,sizeof(d.name));
+                info.is_usb=1;
+                snprintf(info.location,sizeof(info.location),"%.511s",real);
+                filetext(real,"manufacturer",info.manufacturer,sizeof(info.manufacturer));
+                filetext(real,"product",info.product,sizeof(info.product));
+                snprintf(d.name,sizeof(d.name),"%s",info.product);
                 filetext(real,"serial",d.serial,sizeof(d.serial)); break;
             }
             slash=strrchr(real,'/'); if(!slash || slash==real) break; *slash=0;
         }
         if(!d.name[0]) snprintf(d.name,sizeof(d.name),"%s",entry->d_name);
-        if(cb(&d,ctx)) break;
+        info.device=d; if(cb(&info,ctx)) break;
     }
     closedir(dir); return SUART_OK;
+}
+
+typedef struct { suart_device_fn fn; void *ctx; } linux_compat;
+static int linux_old_callback(const suart_device_info *d,void *ctx) {
+    linux_compat *c=(linux_compat *)ctx; return c->fn(&d->device,c->ctx);
+}
+int suart_linux_enumerate_at(const char *sys,const char *dev,suart_device_fn cb,void *ctx) {
+    linux_compat c; if(!cb) return SUART_INVALID; c.fn=cb; c.ctx=ctx;
+    return suart_linux_enumerate_ex_at(sys,dev,linux_old_callback,&c);
 }

@@ -58,3 +58,7 @@ int main(void) {
     CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && !strcmp(d.path,"port-A"));
     puts("Automatic selection, busy-port fallback, pinned identity, ambiguity and explicit blocking passed"); return 0;
 }
+
+int suart_resolve_ex(const suart_selector_ex *s,suart_device_info *d) {
+    (void)s; (void)d; return SUART_NOT_FOUND;
+}

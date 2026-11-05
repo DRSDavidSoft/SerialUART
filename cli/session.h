@@ -7,7 +7,8 @@ typedef struct { unsigned vid,pid; char name[512]; } sc_alias;
 typedef struct {
     int display,force_newline,no_status,echo,line_buffer,bulk,exit_key,clear_screen,input_cr,prefer_boards;
     int auto_connect,list_kind,log_append,log_display,log_time,pinned;
-    const char *log_path,*title,*board_name;
+    const char *log_path,*title,*board_name,*instance_id,*match;
+    int output_silent;
     unsigned char enter[256],line[4096]; size_t enter_size,line_size;
     sc_rule rules[64]; unsigned rule_count;
     sc_alias aliases[64]; unsigned alias_count;
@@ -34,6 +35,7 @@ int sc_output_close(sc_session *);
  * are handled by the caller, before this editor. */
 int sc_input(sc_session *,unsigned char,unsigned char *,size_t,size_t *);
 void sc_console(sc_session *);
+int sc_list_extended(sc_session *,const suart_selector *,int json);
 void sc_help(void);
 size_t sc_utf16(unsigned *lead,unsigned unit,unsigned char out[8]);
 const char *sc_key_sequence(unsigned virtual_key);
