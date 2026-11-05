@@ -260,7 +260,11 @@ static void run_action(workspace *w) {
     else if(a==CONNECT) {
         if(w->port || w->wanted) { disconnect(w); status(w,"Disconnected"); }
         else {
-            if(w->argument[0]) { snprintf(w->path,sizeof(w->path),"%s",w->argument); w->selector.path=w->path; }
+            if(w->argument[0]) {
+                size_t n=strlen(w->argument);
+                if(n>=sizeof(w->path)) { w->error=1; status(w,"Port path is too long"); w->argument[0]=0; return; }
+                memcpy(w->path,w->argument,n+1); w->selector.path=w->path;
+            }
             w->pinned=0; w->features->pinned=0; w->wanted=1; w->retry=0; open_device(w);
         }
         main_menu(w);
