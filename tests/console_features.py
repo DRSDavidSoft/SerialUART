@@ -81,7 +81,14 @@ class Console(unittest.TestCase):
                 os.write(console,b'\x1dm'); until(b'Serial workspace')
                 command('disconnect'); until(b'Disconnected')
                 command('quit'); self.assertEqual(p.wait(timeout=4),0)
-                self.assertEqual(termios.tcgetattr(screen),before)
+                restored=termios.tcgetattr(screen)
+                if sys.platform=='darwin':
+                    # XNU sets PENDIN when ICANON is restored; it is transient
+                    # line-discipline state, not an unrestored user mode.
+                    # apple-oss-distributions/xnu: bsd/kern/tty.c, TIOCSETA.
+                    restored[3] &= ~termios.PENDIN
+                    before[3] &= ~termios.PENDIN
+                self.assertEqual(restored,before)
             finally:
                 if p.poll() is None:
                     p.terminate()

@@ -11,6 +11,7 @@
 #include <windows.h>
 #include <setupapi.h>
 #include <cfgmgr32.h>
+#include "windows_identity.h"
 #include <initguid.h>
 #include <devguid.h>
 #else
@@ -507,20 +508,11 @@ int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
                 text[511]=0; utf8(text,detail.location,sizeof(detail.location));
             }
             for(depth=0;depth<8;++depth) {
-                DEVINST parent; char id[2048],*v,*q,*tail;
+                DEVINST parent; char id[2048];
                 if(CM_Get_Device_IDW(node,text,512,0)!=CR_SUCCESS) break;
                 text[511]=0; utf8(text,id,sizeof(id));
                 if(!depth) snprintf(detail.instance_id,sizeof(detail.instance_id),"%.1023s",id);
-                v=strstr(id,"VID_"); q=strstr(id,"PID_");
-                if(!d.vid && v && q && strlen(v+4)>=4 && strlen(q+4)>=4 &&
-                   strspn(v+4,"0123456789ABCDEFabcdef")>=4 && strspn(q+4,"0123456789ABCDEFabcdef")>=4) {
-                    char value[5]; memcpy(value,v+4,4); value[4]=0; d.vid=(unsigned)strtoul(value,NULL,16);
-                    memcpy(value,q+4,4); d.pid=(unsigned)strtoul(value,NULL,16);
-                }
-                if(!strncmp(id,"USB\\",4)) {
-                    detail.is_usb=1; tail=strrchr(id,'\\');
-                    if(!d.serial[0] && tail && !strchr(tail+1,'&')) snprintf(d.serial,sizeof(d.serial),"%.255s",tail+1);
-                }
+                detail.device=d; suart_windows_identity(&detail,id); d=detail.device;
                 if(CM_Get_Parent(&parent,node,0)!=CR_SUCCESS) break;
                 node=parent;
             }

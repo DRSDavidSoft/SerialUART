@@ -1,5 +1,6 @@
 /* Drive the actual console model and PortableShell byte handlers without devices. */
 #include "../cli/tui.c"
+#include "../lib/windows_identity.h"
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"console line %d: %s\n",__LINE__,#x); return 1; } } while(0)
 static char captured[1048576]; static size_t capture_size;
 static void capture(void *ctx,const ps_byte *b,unsigned n) {
@@ -40,6 +41,17 @@ int main(int argc,char **argv) {
     CHECK(strlen(w->report)>HISTORY_SIZE*4 && strstr(w->report,"[FF]"));
     CHECK(strlen(ps_editor_text(w->shell))==strlen(w->report)); ps_key(w->shell,27);
     w->history_size=0;
+    memset(&device,0,sizeof(device));
+    suart_windows_identity(&device,"USB\\VID_2341&PID_0043&MI_00\\6&generated");
+    CHECK(device.device.vid==0x2341 && device.device.pid==0x0043 && !device.device.serial[0]);
+    suart_windows_identity(&device,"USB\\VID_2109&PID_2817\\HUB-SERIAL");
+    CHECK(!device.device.serial[0]);
+    suart_windows_identity(&device,"USB\\VID_2341&PID_0043\\BOARD-SERIAL");
+    CHECK(!strcmp(device.device.serial,"BOARD-SERIAL") && device.is_usb);
+    CHECK(suart_windows_id_value("VID_A","VID_")==65536);
+    CHECK(suart_windows_id_value("VID_12345","VID_")==65536);
+    CHECK(suart_windows_id_value("VID_XYZ1","VID_")==65536);
+    memset(&device,0,sizeof(device)); strcpy(device.device.path,"COM18"); strcpy(device.device.name,"USB-SERIAL CH340");
     if(argc==3 && (!strcmp(argv[1],"--preview") || !strcmp(argv[1],"--preview-settings"))) {
         FILE *out; capture_size=0; ps_close(w->shell); ps_start(w->shell);
         w->config.baud=115200; w->identity=device; snprintf(w->notice,sizeof(w->notice),"Disconnected | USB-SERIAL CH340 (fixture) | 115200 baud");
