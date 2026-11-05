@@ -83,7 +83,10 @@ each time; hotplug can change results between pages. Listing never opens ports.
 VID/PID are decimal JSON numbers (for example 9025 = USB VID 2341 hex).
 Selectors/settings start with command-line defaults; supplied fields replace
 their corresponding defaults. Selectors combine with AND, and ambiguity fails.
-Include/exclude/block and board-name rules still apply. `devices.list.match`
+Listing obeys include/exclude/block and board-name rules. Opens follow the CLI's
+selection policy: explicit manual selection can override include/exclude rules,
+but never block rules; extended instance/match selection also enforces exclusions.
+These filters are convenience rules, not an authentication boundary. `devices.list.match`
 replaces the default match for that enumeration.
 
 Default configuration is 57600 baud, 8N1, no RTS/CTS and DTR `keep`.
@@ -128,7 +131,7 @@ The interactive application still supports its existing automatic reconnect.
 
 Only one network client owns a server at a time. Client loss closes the serial
 port, cancels events and discards any incomplete request; a new client starts
-disconnected. Stdio EOF and server termination also close the port. A request
+disconnected with zero byte counters. Stdio EOF and server termination also close the port. A request
 already executing when a connection is lost may finish; transport loss cannot
 undo serial writes. Capture logs record received serial bytes, never RPC JSON.
 

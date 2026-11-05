@@ -125,6 +125,13 @@ class API(unittest.TestCase):
             c.close()
             with socket.create_connection(('127.0.0.1',port),timeout=4) as other:
                 with self.assertRaises((EOFError,ConnectionResetError)): upgrade(other,'https://untrusted.example')
+        with service('websocket',('--origin','http://127.0.0.1:8000')) as (c,p,port):
+            c.close()
+            with socket.create_connection(('127.0.0.1',port),timeout=4) as browser:
+                upgrade(browser,'http://127.0.0.1:8000')
+                browser.sendall(frame(json.dumps(request('system.info')).encode()))
+                op,data=ws_read(browser);self.assertEqual(op,1)
+                self.assertEqual(json.loads(data)['result']['application'],'SerialUART')
     @unittest.skipIf(os.name=='nt','serial transfer uses a POSIX PTY, never an arbitrary COM port')
     def test_serial_session_binary_events_filters_and_client_ownership(self):
         import pty

@@ -32,7 +32,7 @@ static int keys(const j_doc *d,int p,const char *allowed) {
     }
     return 1;
 }
-static void close_port(rpc *r) { suart_close(r->port);r->port=NULL;r->subscribed=0;memset(&r->device,0,sizeof(r->device)); }
+static void close_port(rpc *r) { suart_close(r->port);r->port=NULL;r->subscribed=0;r->rx=r->tx=0;memset(&r->device,0,sizeof(r->device)); }
 static int send_response(rpc *r,const char *s,size_t n) {
     if(r->network) return suart_net_write(r->network,s,n);
     return fwrite(s,1,n,stdout)!=n || fflush(stdout)?-1:0;
@@ -101,7 +101,7 @@ static int execute(rpc *r,const char *method,int p,j_out *out) {
         r->features->auto_connect=r->features->pinned=0;
         rc=sc_open(r->features,&s,&c,&r->device,&r->port,&r->native);
         r->features->instance_id=old_instance;r->features->match=old_match;r->features->auto_connect=old_auto;r->features->pinned=old_pin;
-        if(rc) { r->serial_status=rc;return -32000; }
+        if(rc) { close_port(r);r->serial_status=rc;return -32000; }
         r->rx=r->tx=0;j_raw(out,"{\"path\":");j_quote(out,r->device.path);j_raw(out,",\"configuration\":");config_json(out,&c);j_raw(out,"}");return 0;
     }
     if(!strcmp(method,"port.close") || !strcmp(method,"server.shutdown")) {
