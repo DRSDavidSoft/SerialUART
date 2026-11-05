@@ -9,4 +9,5 @@ void *suart_linux_save(int fd);
 void suart_linux_restore(int fd,void *state);
 int suart_linux_counters(int fd,suart_counters *c);
 int suart_linux_enumerate_at(const char *sys,const char *dev,suart_device_fn cb,void *ctx);
+int suart_linux_enumerate_ex_at(const char *sys,const char *dev,suart_device_info_fn cb,void *ctx);
 #endif

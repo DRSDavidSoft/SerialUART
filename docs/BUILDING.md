@@ -132,19 +132,19 @@ Build-tree consumers can use `add_subdirectory(SerialUART)` and the same target.
 Linux:
 
 ```sh
-cc -std=c99 -O2 -Ilib -Iexamples -Icli SendCommand.c cli/*.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
+cc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
 ```
 
 MinGW-w64:
 
 ```sh
-gcc -std=c99 -O2 -Ilib -Iexamples -Icli SendCommand.c cli/*.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lws2_32 -lshell32 -o SendCommand.exe
+gcc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lcfgmgr32 -lws2_32 -lshell32 -o SendCommand.exe
 ```
 
 MSVC developer terminal:
 
 ```bat
-cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli SendCommand.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib ws2_32.lib shell32.lib
+cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli /Ivendor\portable-shell\include /DPS_EDITOR_CAPACITY=33792 /DPS_LINE=1024 SendCommand.c cli\tui.c cli\discovery.c vendor\portable-shell\src\portable_shell.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib cfgmgr32.lib ws2_32.lib shell32.lib
 ```
 
 For macOS omit `lib/linux_native.c` and append
@@ -170,7 +170,7 @@ public header, `SerialLoopback`, CMake config, source/compiler manifest, guides 
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
-required branch check. Tag `v2.2.0` (matching the source version) to run the same
+required branch check. Tag `v2.3.0` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
 releases are not overwritten. Packages receive GitHub build-provenance attestations.
 Review the draft and publish it manually.
@@ -192,3 +192,9 @@ session; npm dependencies are test tooling and are not linked or shipped.
 Verify a downloaded package with `sha256sum -c SHA256SUMS` on Linux or
 `Get-FileHash package.zip -Algorithm SHA256` on PowerShell. Extract it and add
 the extracted `bin` directory to PATH, or use CMake installation from source.
+
+
+The optional interactive `--tui` workspace embeds the MIT-licensed PortableShell
+C core from `vendor/portable-shell`. It needs no installed package or network
+fetch. OS I/O remains in `cli/tui.c`; the standalone serial library does not
+link the UI. Packages include its license and upstream revision manifest.

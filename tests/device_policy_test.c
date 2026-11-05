@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #define CHECK(x) do { if(!(x)) { fprintf(stderr,"line %d: %s\n",__LINE__,#x); return 1; } } while(0)
+static int extended_result; static unsigned opened; static suart_selector_ex requested;
 static suart_device devices[4]; static unsigned count; static const char *busy;
 int suart_enumerate(suart_device_fn callback,void *ctx) {
     unsigned i; for(i=0;i<count;++i) if(callback(&devices[i],ctx)) break; return 0;
@@ -11,7 +12,7 @@ int suart_resolve(const suart_selector *s,suart_device *d) {
     snprintf(d->path,sizeof(d->path),"%s",s->path); return 0;
 }
 int suart_open_ex(suart_port **p,const char *path,const suart_config *c,unsigned long *error) {
-    (void)c; *p=NULL; *error=0;
+    (void)c; ++opened; *p=NULL; *error=0;
     if(busy && !strcmp(path,busy)) { *error=123; return SUART_ERROR; }
     *p=(suart_port *)(void *)&devices[0]; return 0;
 }
@@ -56,5 +57,23 @@ int main(void) {
     CHECK(sc_option(&s,"--prefer-boards","on")==1);
     CHECK(sc_option(&s,"--board","1234:abcd=Custom model")==1);
     CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && !strcmp(d.path,"port-A"));
+    /* Extended discovery errors and policy blocks must never fall back to a path. */
+    setup(); sc_init(&s); memset(&sel,0,sizeof(sel)); s.instance_id="USB-instance"; s.match="fixture";
+    sel.vid=0x2e8a; opened=0; extended_result=SUART_AMBIGUOUS;
+    CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_AMBIGUOUS && !p && !opened);
+    CHECK(requested.device.vid==0x2e8a && requested.instance_id==s.instance_id && requested.match==s.match);
+    extended_result=SUART_NOT_FOUND;
+    CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_NOT_FOUND && !p && !opened);
+    extended_result=0; CHECK(sc_option(&s,"--block","serial=SERIAL-A")==1);
+    CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_INVALID && !p && !opened);
+    sc_init(&s); s.match="fixture";
+    CHECK(sc_option(&s,"--exclude","serial=SERIAL-A")==1);
+    CHECK(sc_open(&s,&sel,&config,&d,&p,&error)==SUART_INVALID && !p && !opened);
+    sc_init(&s); s.match="fixture"; s.auto_connect=1;
+    CHECK(!sc_open(&s,&sel,&config,&d,&p,&error) && p && opened==1 && s.pinned);
     puts("Automatic selection, busy-port fallback, pinned identity, ambiguity and explicit blocking passed"); return 0;
+}
+
+int suart_resolve_ex(const suart_selector_ex *s,suart_device_info *d) {
+    requested=*s; memset(d,0,sizeof(*d)); d->device=devices[0]; return extended_result;
 }

@@ -14,7 +14,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-#define SUART_VERSION "2.2.0"
+#define SUART_VERSION "2.3.0"
 typedef struct suart_port suart_port;
 enum { SUART_OK=0, SUART_ERROR=-1, SUART_INVALID=-2, SUART_NOT_FOUND=-3,
        SUART_AMBIGUOUS=-4, SUART_UNSUPPORTED=-5, SUART_TIMEOUT=-6,
@@ -38,6 +38,23 @@ typedef struct {
     unsigned vid, pid; /* zero means no filter */
 } suart_selector;
 typedef int (*suart_device_fn)(const suart_device *, void *);
+/* Extended discovery is additive: the v2 suart_device/selector ABI is unchanged.
+ * Empty strings/zero known flags mean unavailable, never a guessed identity.
+ * Instance IDs describe an OS device path and need not survive moving USB ports. */
+typedef struct {
+    suart_device device;
+    char manufacturer[256], product[512], instance_id[1024], location[512];
+    unsigned is_usb, problem_known, problem_code;
+} suart_device_info;
+typedef struct {
+    suart_selector device;
+    const char *instance_id, *match; /* exact instance; ASCII case-insensitive search */
+} suart_selector_ex;
+typedef int (*suart_device_info_fn)(const suart_device_info *, void *);
+SUART_API int suart_enumerate_ex(suart_device_info_fn, void *);
+SUART_API int suart_resolve_ex(const suart_selector_ex *, suart_device_info *);
+SUART_API int suart_device_matches(const suart_selector_ex *, const suart_device_info *);
+SUART_API const char *suart_discovery_source(void);
 SUART_API const char *suart_version(void);
 SUART_API void suart_config_init(suart_config *);
 /* Enumeration opens no ports; callback returns nonzero to stop. */

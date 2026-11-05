@@ -3,6 +3,7 @@
 #include "protocol.h"
 #include "network.h"
 #include "session.h"
+#include "tui.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -151,6 +152,9 @@ static void help(void) {
          "  --write-timeout MS        Write/TX queue deadline (1..60000, default 2000)\n"
          "  --discard-input           Explicitly discard RX after opening\n"
          "  --show-config             Report driver settings and modem bits to stderr\n"
+         "  --tui                     Interactive menus, settings and serial workspace\n"
+         "  --list-json / --list-details  Extended native device identities (no opens)\n"
+         "  --instance ID / --match TEXT  Exact OS instance / metadata search\n"
          "  --terminal                Raw terminal; Ctrl+] then ? for shortcuts\n"
          "  --receive                 Receive only; stdin is ignored\n"
          "  --timeout MS              Idle timeout after send/EOF (default 1000)\n"
@@ -202,7 +206,7 @@ static void show_config(suart_port *p) {
 int main(int argc,char **argv) {
     suart_config c; suart_selector sel={0}; suart_port *port=NULL; suart_device device;
     suart_net *net=NULL; const char *send_text=NULL,*hex=NULL,*mode=NULL,*host=NULL,*origin=NULL;
-    unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
+    unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,tui=0,list_extended=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
     int eof=0,escape=0,received=0,sent_command=0; uint64_t last=0,retry=0;
     int newline=0,until=-1,discard_input=0,diagnostics=0,tx_waited=0;
     uint64_t reply_end=0,tx_end=0;
@@ -217,6 +221,9 @@ int main(int argc,char **argv) {
         if(feature==1) continue;
         if(!strcmp(a,"--help") || !strcmp(a,"-h")) { help(); sc_help(); return 0; }
         if(!strcmp(a,"--version")) { puts(SUART_VERSION); return 0; }
+        if(!strcmp(a,"--tui")) { tui=1; raw=1; continue; }
+        if(!strcmp(a,"--list-json")) { list_extended=1; continue; }
+        if(!strcmp(a,"--list-details")) { list_extended=2; continue; }
         if(!strcmp(a,"--terminal")) { raw=1; continue; }
         if(!strcmp(a,"--receive")) { receive=1; continue; }
         if(!strcmp(a,"--rts-cts")) { c.rts_cts=1; continue; }
@@ -226,6 +233,8 @@ int main(int argc,char **argv) {
         if(i+1>=argc) { fprintf(stderr,"Missing value for %s\n",a); return 2; }
         v=argv[++i];
         if(!strcmp(a,"--port") || !strcmp(a,"-p")) sel.path=v;
+        else if(!strcmp(a,"--instance")) features.instance_id=v;
+        else if(!strcmp(a,"--match")) features.match=v;
         else if(!strcmp(a,"--name")) sel.name=v;
         else if(!strcmp(a,"--serial")) sel.serial=v;
         else if(!strcmp(a,"--vid")) sel.vid=number(v,65535,16,&ok);
@@ -266,6 +275,7 @@ int main(int argc,char **argv) {
         }
         if(!ok) { fprintf(stderr,"Invalid value for %s: %s\n",a,v); return 2; }
     }
+    if(list_extended) return sc_list_extended(&features,&sel,list_extended==1)?1:0;
     if(features.list_kind) {
         if(features.list_kind<=2) return sc_list(&features)?1:0;
         if(features.list_kind==3) sc_boards(&features);
@@ -282,6 +292,7 @@ int main(int argc,char **argv) {
        (mode && (features.display || features.force_newline || features.no_status || features.log_display))) {
         fputs("Terminal controls require --terminal; display transforms require a stdout mode\n",stderr); return 2;
     }
+    if(tui && (discard_input || diagnostics || features.exit_key)) { fputs("--tui uses explicit console actions; omit --discard-input, --show-config and --exit-key\n",stderr); return 2; }
     if(argc==1) { help(); return 2; }
     if(send_text) { command_len=strlen(send_text); if(command_len>sizeof(command)-(size_t)newline) return 2; memcpy(command,send_text,command_len); if(newline) command[command_len++]='\n'; }
     if(hex && suart_hex(hex,command,sizeof(command),&command_len)) { fputs("Invalid hex bytes\n",stderr); return 2; }
@@ -293,6 +304,7 @@ int main(int argc,char **argv) {
     if(input_init(raw)) { fputs("Cannot configure terminal\n",stderr); return 1; }
     setvbuf(stdout,NULL,_IONBF,0);
     if(sc_output_open(&features)) { rc=1; goto done; }
+    if(tui) { rc=sc_tui_run(&features,&sel,&c,reconnect,write_timeout,input_read,&stopping); goto done; }
     if(mode) {
         net=suart_net_open(mode,host,net_port,client,origin);
         if(!net) { fputs("Cannot open network adapter\n",stderr); rc=1; goto done; }

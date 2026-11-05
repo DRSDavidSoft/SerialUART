@@ -46,7 +46,7 @@ static int log_display(sc_session *s,const unsigned char *b,size_t n) {
 typedef struct { sc_session *s; unsigned char bytes[8192]; size_t size; } sink;
 static int flush(sink *out) {
     if(!out->size) return 0;
-    if(fwrite(out->bytes,1,out->size,stdout)!=out->size || log_display(out->s,out->bytes,out->size)) return -1;
+    if((!out->s->output_silent && fwrite(out->bytes,1,out->size,stdout)!=out->size) || log_display(out->s,out->bytes,out->size)) return -1;
     out->size=0; return 0;
 }
 static int emit(sink *out,unsigned char c) {

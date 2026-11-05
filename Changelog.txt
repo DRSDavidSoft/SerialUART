@@ -11,6 +11,15 @@ Website: www.Refoua.me
 
 Changelog:
 
+v2.3.0
+======
++ Embed PortableShell menus and inline settings in the opt-in --tui serial workspace.
++ Add searchable ports, terminal switching, receive/hex history, send form and modem controls.
++ Add extended native identities, manufacturer/product, location and Windows problem readback.
++ Add --list-json, --list-details, --instance and metadata --match selection.
++ Preserve the v2 C ABI and keep the UI independent of the serial library.
++ Add console model, real PTY session and extended discovery regressions.
+
 v2.2.0
 ======
 + Port SimplySerial session features into native C host modules.

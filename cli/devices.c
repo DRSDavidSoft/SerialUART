@@ -123,6 +123,18 @@ int sc_open(sc_session *s,const suart_selector *sel,const suart_config *config,s
         else { pinned.path=s->identity.path; pinned.vid=s->identity.vid; pinned.pid=s->identity.pid; }
         sel=&pinned;
     }
+    if(s->instance_id || s->match) {
+        suart_selector_ex filter; suart_device_info detail;
+        memset(&filter,0,sizeof(filter)); filter.device=*sel;
+        filter.instance_id=s->instance_id; filter.match=s->match;
+        rc=suart_resolve_ex(&filter,&detail); if(rc) return rc;
+        *device=detail.device;
+        if(sc_device_state(s,device)) return SUART_INVALID;
+        if(s->board_name) { char board[512]; sc_board(s,device,board,sizeof(board)); if(strcmp(board,s->board_name)) return SUART_NOT_FOUND; }
+        rc=suart_open_ex(port,device->path,config,error);
+        if(!rc && s->auto_connect==1 && !s->pinned) { s->identity=*device; s->pinned=1; }
+        return rc;
+    }
     if(!s->auto_connect && !s->board_name) {
         rc=suart_resolve(sel,device); if(rc) return rc;
         /* Resolve available metadata even for a path-only manual selection. */

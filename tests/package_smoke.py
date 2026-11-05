@@ -17,8 +17,11 @@ target_link_libraries(consumer PRIVATE SerialUART::serialuart)
 int main(void) {
     suart_config c; suart_modem m; suart_counters counters;
     unsigned char b; size_t n;
+    suart_device_info info; suart_selector_ex selector={0};
     suart_config_init(&c);
-    return c.baud!=57600 || suart_wait_tx(NULL,0)!=SUART_INVALID ||
+    return !suart_discovery_source()[0] || suart_resolve_ex(NULL,&info)!=SUART_INVALID ||
+        suart_device_matches(&selector,NULL)!=0 || suart_enumerate_ex(NULL,NULL)!=SUART_INVALID ||
+        c.baud!=57600 || suart_wait_tx(NULL,0)!=SUART_INVALID ||
         suart_get_modem(NULL,&m)!=SUART_INVALID ||
         suart_get_counters(NULL,&counters)!=SUART_INVALID ||
         suart_read_until(NULL,&b,1,&n,'\\n',0)!=SUART_INVALID;
@@ -35,7 +38,7 @@ int main(void) {
     subprocess.run([str(exe)], check=True, env=env)
     cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
     version = subprocess.check_output([str(cli), "--version"], env=env).strip()
-    if version != b"2.2.0":
+    if version != b"2.3.0":
         raise SystemExit("Installed executable version differs from expected package")
     manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
     if not manifest or "Source commit:" not in manifest[0].read_text():
@@ -45,5 +48,7 @@ int main(void) {
     docs = prefix / "share/doc/SerialUART"
     if "Edward Wright" not in (docs / "data/SIMPLYSERIAL-LICENSE.txt").read_text():
         raise SystemExit("Imported board-data license is missing")
+    if "MIT License" not in (docs / "portable-shell/LICENSE").read_text():
+        raise SystemExit("Embedded PortableShell license is missing")
     if not (docs / "examples/profiles/circuitpython.cfg").is_file():
         raise SystemExit("Example terminal profile is missing")
