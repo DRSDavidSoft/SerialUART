@@ -8,20 +8,20 @@ be replaced without changing its ABI.
 ## Raw TCP
 
 ```sh
-SendCommand -p /dev/ttyACM0 -b 115200 --listen tcp 127.0.0.1 8765
-SendCommand -p COM12 --connect tcp 127.0.0.1 8765
+SerialUART -p /dev/ttyACM0 -b 115200 --listen tcp 127.0.0.1 8765
+SerialUART -p COM12 --connect tcp 127.0.0.1 8765
 ```
 
 A listener accepts a client and transfers bytes in both directions. A TCP
 client connects to an existing TCP server. TCP is a byte stream: serial reads,
-socket reads and application messages need not share boundaries. SendCommand
+socket reads and application messages need not share boundaries. SerialUART
 does not implement UDP, IP raw sockets, RFC2217, or remote port reconfiguration.
 Here “raw socket” means an unframed TCP stream.
 
 ## WebSocket
 
 ```sh
-SendCommand -p /dev/ttyACM0 -b 115200 --listen ws 127.0.0.1 8765 --origin http://localhost:8000
+SerialUART -p /dev/ttyACM0 -b 115200 --listen ws 127.0.0.1 8765 --origin http://localhost:8000
 ```
 
 Use `ws://127.0.0.1:8765/serial` (or `/`). Client text and binary payloads become
@@ -40,7 +40,7 @@ connect without an Origin header.
 ## Socket.IO
 
 ```sh
-SendCommand -p /dev/ttyACM0 --listen socketio 127.0.0.1 8765 --origin http://localhost:8000
+SerialUART -p /dev/ttyACM0 --listen socketio 127.0.0.1 8765 --origin http://localhost:8000
 ```
 
 The adapter implements an explicit subset of Engine.IO v4 / Socket.IO protocol

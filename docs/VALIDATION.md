@@ -47,6 +47,20 @@ terminal settings. The test terminal drains output continuously on macOS and
 Linux. Windows runs model, API, JSON discovery, installed-consumer and build
 checks; interactive Windows console and USB devices remain hardware acceptance.
 
+## Application split and RPC checks (2.4)
+
+The default full-application invocation runs the real menu/serial PTY test.
+The mini sender builds without the console, RPC parser or network source files.
+Installed-package consumers execute both binaries and request `system.info` over
+stdio IPC. Direct GCC/Clang/MSVC entry points build and test both applications.
+
+RPC integration uses real stdio pipes, loopback TCP and WebSocket connections:
+JSON-RPC notifications/batches, Unicode IDs, strict UTF-8, duplicate-key rejection,
+input limits/recovery, fragmented messages, ping/pong and exact Origin policy.
+POSIX PTYs cover binary send/read, receive events, port ownership, blocked opens,
+invalid parameters/base64 and client replacement. Parser mutation tests also run
+under ASan/UBSan. Windows runs transport tests without opening arbitrary COM ports.
+
 ## Hardware checklist (requires actual devices)
 
 Record OS, compiler/version, commit, executable hash, USB adapter/driver, board
@@ -63,6 +77,8 @@ model/firmware and observed result. Keep this checklist open until measured:
 - [ ] Terminal shortcuts and restored console verified in Windows Terminal and POSIX terminal.
 - [ ] Physical Raspberry Pi GPIO UART and USB serial verified separately.
 - [ ] Network bridge reconnects after peer loss while the real serial device stays open.
+- [ ] RPC client loss closes its real serial port; a replacement client starts
+  disconnected. Verify driver behavior during unplug, blocked TX and subscriptions.
 - [ ] Long transfer/soak with slow consumers and physical flow control checked for loss.
 - [ ] With RTS/CTS wired, hold CTS inactive: verify write/TX queue timeout and
   native close behavior, then restore CTS and record what was actually delivered.

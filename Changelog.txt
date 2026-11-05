@@ -1,3 +1,14 @@
+v2.4.0
+  Separate mini SendCommand and full SerialUART executables. SerialUART opens the
+  PortableShell workspace by default; --send, --pipe and --terminal select other modes.
+  Replace --tui / --list-json / --list-details with descriptive application/listing
+  commands: --interactive, --list-devices and --output-format text|json|ndjson.
+  Add dependency-free JSON-RPC 2.0 API over NDJSON stdio IPC, local TCP and WebSocket:
+  discovery, explicit port ownership/configuration, binary I/O, events and modem controls.
+  Bounded UTF-8 JSON parsing, duplicate-key rejection, per-client cleanup and no replay.
+  Add real transport/PTY tests, installed-application checks and both direct builds.
+  C ABI remains compatible with v2.x. Physical device acceptance remains separate.
+
 
 SerialUART Cross-platform
 Author: David Refoua

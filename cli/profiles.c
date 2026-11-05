@@ -22,7 +22,7 @@ static char *trim(char *s) {
     *end=0; return s;
 }
 static int allowed(const char *s) {
-    static const char *keys[]={"--tui","--instance","--match","--port","--name","--serial","--vid","--pid","--baud","--data-bits","--parity","--stop-bits",
+    static const char *keys[]={"--interactive","--instance","--match","--port","--name","--serial","--vid","--pid","--baud","--data-bits","--parity","--stop-bits",
         "--rts-cts","--dtr","--boot-wait","--timeout","--write-timeout","--reconnect","--terminal","--receive","--quiet",
         "--discard-input","--show-config","--log","--log-mode","--log-format","--log-time","--display","--force-newline",
         "--status","--title","--clear-screen","--echo","--line-buffer","--bulk-send","--exit-key","--enter","--enter-hex",
@@ -64,7 +64,7 @@ bad:
 }
 static int step(int argc,char **argv,int i) {
     static const char *flags[]={"--profiles","--help","-h","--version","--list","--list-all","--list-settings","--list-filters",
-        "--list-boards","--tui","--list-json","--list-details","--terminal","--receive","--rts-cts","--discard-input","--show-config","--quiet","-q","--log-time"};
+        "--list-boards","--interactive","--list-devices","--pipe","--terminal","--receive","--rts-cts","--discard-input","--show-config","--quiet","-q","--log-time"};
     size_t n; int count=2;
     for(n=0;n<sizeof(flags)/sizeof(flags[0]);++n) if(!strcmp(argv[i],flags[n])) return 1;
     if(!strcmp(argv[i],"--listen") || !strcmp(argv[i],"--connect")) count=4;

@@ -9,7 +9,7 @@
 
 SerialUART configures and exchanges arbitrary bytes with serial devices on Windows,
 Linux, Raspberry Pi OS, and macOS. Use the C ABI from C++, a language binding, or
-the included `SendCommand` executable. The library and CLI use the C runtime and
+the small `SendCommand` utility, or the full `SerialUART` application. All use the C runtime and
 native OS APIs; they require no third-party serial, USB, networking, or JSON libraries.
 
 ![Editable serial settings rendered by PortableShell](docs/console-settings.svg)
@@ -19,11 +19,20 @@ native OS APIs; they require no third-party serial, USB, networking, or JSON lib
 ## Start here
 
 ```sh
-SendCommand --tui
+SerialUART
 SendCommand --list
 SendCommand --port COM12 --baud 115200 --send STATUS
 SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 ```
+
+| Application | Default behavior | Includes |
+|---|---|---|
+| **SerialUART** (`SerialUART.exe`) | Interactive serial workspace | Menus, settings, history, one-shot sends, pipes, bridges and RPC |
+| **SendCommand** (`SendCommand.exe`) | Small command/pipeline utility | Serial discovery/configuration, sends, receive, raw terminal and profiles |
+
+`SendCommand` does not link the menu framework, network transport or RPC engine.
+Use `SerialUART --send STATUS --port COM12` for a one-shot command in the full app.
+See the [2.4 command migration](docs/USAGE.md#migrating-from-v23) for renamed options.
 
 | Need | Use |
 |---|---|
@@ -32,6 +41,7 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 | Interactive menus, editable settings and history | [Serial workspace](docs/CONSOLE.md) |
 | A serial terminal or binary pipeline | [CLI guide](docs/USAGE.md) |
 | Arduino reset control | [DTR and Arduino](docs/USAGE.md#arduino-and-dtr) |
+| IPC, NDJSON or WebSocket control API | [RPC guide and examples](docs/RPC.md) |
 | TCP, WebSocket, or Socket.IO bridge | [Host adapters](docs/NETWORK.md) |
 | Build packages and draft releases | [CI/CD and validation](docs/BUILDING.md#cicd) |
 | Test a loopback or byte-exact echo device | [Counting-pattern integrity test](docs/USAGE.md#counting-pattern-loopback) |
@@ -47,9 +57,9 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
   explicit buffer discard, bounded TX queue waits, POSIX ownership, and Linux
   custom numeric baud rates and optional driver error counters.
 - PortableShell menus, searchable port picker, inline settings, receive/hex history,
-  modem controls and a raw terminal in the opt-in `--tui` workspace.
+  modem controls and a raw terminal in the default `SerialUART` workspace.
 - Extended device identities, manufacturer/product, location and present-device
-  Windows problem codes, with `--list-json`, `--list-details`, `--instance`, `--match`.
+  Windows problem codes, with `--list-devices`, `--output-format json|ndjson`, `--instance`, `--match`.
 - Friendly names and USB VID/PID/serial discovery through SetupAPI on Windows,
   sysfs on Linux, and IOKit on macOS. Enumeration never opens a port.
 - Selection by exact path, exact name, VID/PID, serial number, or combined filters.
@@ -64,7 +74,9 @@ SendCommand --port /dev/ttyACM0 --baud 115200 --terminal
 - Offline recognition for 472 board models, custom aliases, include/exclude/block
   rules, and ONE/ANY automatic connection with busy-port handling and identity pins.
 - Optional one-peer TCP, WebSocket and Socket.IO bridge examples, built into
-  the CLI. Network code is separate from the serial library.
+  `SerialUART` application. Network code is separate from the serial library.
+- JSON-RPC API over NDJSON stdio IPC, local TCP, or WebSocket, with explicit
+  port ownership, binary transfers and receive subscriptions.
 
 ## Build in three steps
 
@@ -76,7 +88,9 @@ cmake --build build --config Release
 ctest --test-dir build -C Release --output-on-failure
 ```
 
-The program is `build/SendCommand` on Unix and usually
+Both applications are built together: `build/SerialUART` and `build/SendCommand`
+on Unix, with `.exe` on Windows. Visual Studio puts them in `build/Release`.
+The mini sender is `build/SendCommand` on Unix and usually
 `build/Release/SendCommand.exe` with Visual Studio. With MinGW/Ninja it is
 `build/SendCommand.exe`. See the [build guide](docs/BUILDING.md) for installation,
 shared libraries, direct compiler commands, and Raspberry Pi cross compilation.

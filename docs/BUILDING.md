@@ -8,7 +8,7 @@
 - Python 3 for integration/package tooling only. No pip packages are needed.
 
 Use `-DBUILD_TESTING=OFF` for a C-only production build without a C++ compiler or
-Python. Both the library and executable are written entirely in C.
+Python. The library and both applications are written entirely in C.
 
 ## Windows
 
@@ -129,26 +129,26 @@ Build-tree consumers can use `add_subdirectory(SerialUART)` and the same target.
 
 ## Without CMake
 
-Linux:
+The direct compiler helper builds **both** applications with their separate
+source/link sets, then runs the RPC tests. It needs Python only while building:
 
 ```sh
-cc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
+python tools/build-direct.py --compiler gcc
+python tools/build-direct.py --compiler clang
+# Windows Visual Studio developer terminal:
+python tools/build-direct.py --compiler cl
 ```
 
-MinGW-w64:
+It prints each complete compiler command, so it can also be run manually without
+Python. GCC/Clang builds use C99; MSVC uses `/std:c11`. On Linux it includes the
+native termios2 helper; macOS links IOKit/CoreFoundation; Windows links the native
+serial SDK libraries and adds Winsock only to the full application.
+To build just the mini sender with GCC on Linux:
 
 ```sh
-gcc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lcfgmgr32 -lws2_32 -lshell32 -o SendCommand.exe
+cc -std=c99 -O2 -Ilib -Iexamples -Icli SendCommand.c cli/discovery.c cli/session.c cli/options.c cli/profiles.c cli/devices.c cli/keys.c cli/windows_args.c lib/SerialUART.c lib/linux_native.c examples/protocol.c -o SendCommand
 ```
 
-MSVC developer terminal:
-
-```bat
-cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli /Ivendor\portable-shell\include /DPS_EDITOR_CAPACITY=33792 /DPS_LINE=1024 SendCommand.c cli\tui.c cli\discovery.c vendor\portable-shell\src\portable_shell.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib cfgmgr32.lib ws2_32.lib shell32.lib
-```
-
-For macOS omit `lib/linux_native.c` and append
-`-framework IOKit -framework CoreFoundation` to the Unix command.
 For the serial library alone, compile `lib/SerialUART.c` and, on Linux only,
 `lib/linux_native.c`; protocol/network adapters introduce no serial library
 dependency. Linux's native helper keeps kernel `termios2` separate from libc's
@@ -165,12 +165,12 @@ cc -std=c99 -O2 -Ilib examples/SerialLoopback.c lib/SerialUART.c lib/linux_nativ
 [GitHub Actions](https://github.com/DRSDavidSoft/SerialUART/blob/master/.github/workflows/build.yml) builds and tests ten native
 combinations (five compiler/platform targets × static/shared), plus ARMv7/QEMU.
 Every native build installs to a staging prefix and builds a separate CMake
-consumer against it. Packages include the executable, library/import library,
+consumer against it. Packages include `SerialUART`, `SendCommand`, library/import library,
 public header, `SerialLoopback`, CMake config, source/compiler manifest, guides and host adapter sources. Each ZIP has a
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
-required branch check. Tag `v2.3.0` (matching the source version) to run the same
+required branch check. Tag `v2.4.0` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
 releases are not overwritten. Packages receive GitHub build-provenance attestations.
 Review the draft and publish it manually.
@@ -194,7 +194,12 @@ Verify a downloaded package with `sha256sum -c SHA256SUMS` on Linux or
 the extracted `bin` directory to PATH, or use CMake installation from source.
 
 
-The optional interactive `--tui` workspace embeds the MIT-licensed PortableShell
+The default interactive `SerialUART` workspace embeds the MIT-licensed PortableShell
 C core from `vendor/portable-shell`. It needs no installed package or network
 fetch. OS I/O remains in `cli/tui.c`; the standalone serial library does not
 link the UI. Packages include its license and upstream revision manifest.
+
+The mini `SendCommand` target excludes `suart_console`, `cli/rpc.c`, `cli/json.c`
+and `examples/network.c`. Build it alone with `cmake --build build --target SendCommand`.
+The full application target is named `SerialUART_app` to avoid the library name
+collision, and produces `SerialUART` / `SerialUART.exe`. The C ABI remains version 2.

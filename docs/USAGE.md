@@ -3,7 +3,8 @@
 For saved profiles, logs, board catalogs/filters, local echo and line editing,
 see the [SimplySerial feature guide](SIMPLYSERIAL.md).
 
-`SendCommand --help` is the complete option reference. Selection options combine:
+`SendCommand --help` describes the mini tool; `SerialUART --help` also covers the
+default interactive workspace, network bridges and RPC. Selection options combine:
 
 ```sh
 SendCommand --list
@@ -178,3 +179,20 @@ an explicit hex byte string instead of enabling backslash substitutions.
 Timing options use **milliseconds**, not the prototype's seconds. Removed scan,
 debug, verify-only and slash-prefixed prototype flags are rejected; the program
 does not scan/open arbitrary ports looking for the highest COM number.
+
+## Migrating from v2.3
+
+| Previous command | v2.4 command |
+|---|---|
+| `SendCommand --tui` | `SerialUART` (or explicit `SerialUART --interactive`) |
+| `SendCommand --list-details` | `SendCommand --list-devices` |
+| `SendCommand --list-json` | `SendCommand --list-devices --output-format json` |
+| `SendCommand --listen ...` / `--connect ...` | `SerialUART --listen ...` / `--connect ...` |
+| Mini sender with a pipe | Unchanged; full app uses explicit `SerialUART --pipe ...` |
+
+The old option spellings return an actionable error. `--output-format ndjson`
+emits one JSON device object per line. Both applications retain `--list`, profiles,
+serial selectors, `--send`, `--hex`, `--receive`, and the direct `--terminal` mode.
+Starting `SerialUART` with just selectors/settings opens menus disconnected;
+`--send` selects a one-shot transaction instead. Use [the RPC API](RPC.md) for
+structured control from another process or a WebSocket client.

@@ -1,9 +1,9 @@
 # Interactive serial workspace
 
 ```sh
-SendCommand --tui
-SendCommand --tui --port /dev/ttyACM0 --baud 115200 --log capture.bin
-SendCommand --tui --match CH340 --reconnect 1000
+SerialUART
+SerialUART --port /dev/ttyACM0 --baud 115200 --log capture.bin
+SerialUART --match CH340 --reconnect 1000
 ```
 
 Choose **Ports**, filter the list with `/`, then select a device. Selection does
@@ -19,8 +19,11 @@ The embedded PortableShell C99 framework provides responsive menus, searchable
 lists, editable tabbed tables, forms, read-only scrolling reports, semantic
 colors, command history/completion and terminal resize handling. Its application
 registry contains SerialUART commands only; it never executes an OS shell.
-Both stdin and stdout must be terminals. Ordinary piping and `--terminal` retain
-their existing byte behavior; no menu is inserted into a pipe.
+Both stdin and stdout must be terminals. `SerialUART` opens this workspace by
+default; `--interactive` explicitly selects it in a profile. Use `--pipe` for a
+full-application binary pipeline, or `SendCommand` for the small pipeline tool.
+`--terminal` selects the direct terminal without menus. Redirected input/output
+in default interactive mode is rejected; menus never enter a binary pipe.
 
 ![Editable connection settings rendered from actual console output](console-settings.svg)
 
@@ -71,9 +74,9 @@ scriptable byte I/O and a richer native console.
 ## Native discovery and bindings
 
 ```sh
-SendCommand --list-details
-SendCommand --list-json
-SendCommand --list-json --match QinHeng
+SendCommand --list-devices
+SendCommand --list-devices --output-format json
+SendCommand --list-devices --output-format json --match QinHeng
 SendCommand --instance 'USB\VID_1A86&PID_7523\DEVICE' --baud 115200 --terminal
 ```
 
