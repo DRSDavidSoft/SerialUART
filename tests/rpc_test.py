@@ -1,5 +1,5 @@
 """Real NDJSON pipe/TCP/WebSocket RPC and virtual serial ownership tests."""
-import base64, contextlib, json, os, pathlib, queue, select, shlex, socket, struct
+import base64, contextlib, faulthandler, json, os, pathlib, queue, select, shlex, socket, struct
 import subprocess, sys, tempfile, threading, time, unittest
 APP, MINI = sys.argv[1:3]
 EMULATOR=shlex.split(os.environ.get('SUART_EMULATOR',''));sys.argv[1:]=[]
@@ -170,4 +170,6 @@ class API(unittest.TestCase):
                 with service('stdio',('--block','port='+path)) as (c,_,__):
                     self.assertIn('error',c.call('port.open',{'path':path}))
             finally: os.close(wire);os.close(port)
-if __name__=='__main__': unittest.main()
+if __name__=='__main__':
+    faulthandler.dump_traceback_later(20,repeat=True)
+    unittest.main(verbosity=2)
