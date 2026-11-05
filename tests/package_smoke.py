@@ -17,8 +17,11 @@ target_link_libraries(consumer PRIVATE SerialUART::serialuart)
 int main(void) {
     suart_config c; suart_modem m; suart_counters counters;
     unsigned char b; size_t n;
+    suart_device_info info; suart_selector_ex selector={0};
     suart_config_init(&c);
-    return c.baud!=57600 || suart_wait_tx(NULL,0)!=SUART_INVALID ||
+    return !suart_discovery_source()[0] || suart_resolve_ex(NULL,&info)!=SUART_INVALID ||
+        suart_device_matches(&selector,NULL)!=0 || suart_enumerate_ex(NULL,NULL)!=SUART_INVALID ||
+        c.baud!=57600 || suart_wait_tx(NULL,0)!=SUART_INVALID ||
         suart_get_modem(NULL,&m)!=SUART_INVALID ||
         suart_get_counters(NULL,&counters)!=SUART_INVALID ||
         suart_read_until(NULL,&b,1,&n,'\\n',0)!=SUART_INVALID;

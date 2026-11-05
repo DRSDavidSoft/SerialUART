@@ -1,5 +1,5 @@
 """Real console PTY integration; no physical device is opened."""
-import json, os, pathlib, select, shlex, struct, subprocess, sys, tempfile, time, unittest
+import json, os, pathlib, select, shlex, struct, subprocess, sys, tempfile, threading, time, unittest
 CLI = sys.argv[1]
 EMULATOR = shlex.split(os.environ.get('SUART_EMULATOR', ''))
 sys.argv[1:] = []
@@ -13,6 +13,15 @@ class Console(unittest.TestCase):
             self.assertIn('problem_code',device)
         p = subprocess.run(EMULATOR+[CLI,'--tui'],input=b'quit\n',capture_output=True,timeout=5)
         self.assertNotEqual(p.returncode,0)
+    def test_profile_console_and_metadata_flags(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            profile=pathlib.Path(tmp)/'console.cfg'
+            profile.write_text('--tui\n--match QinHeng\n--instance USB-fixture\n')
+            p=subprocess.run(EMULATOR+[CLI,'--config',str(profile),'--list-settings'],capture_output=True,timeout=5)
+            self.assertEqual(p.returncode,0,p.stderr)
+            self.assertIn(b'--tui',p.stdout)
+            self.assertIn(b'QinHeng',p.stdout)
+            self.assertIn(b'USB-fixture',p.stdout)
     @unittest.skipIf(os.name=='nt','requires POSIX pseudo terminals')
     def test_menu_edit_capture_terminal_and_restore(self):
         import pty, termios, fcntl
@@ -22,13 +31,26 @@ class Console(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             log=pathlib.Path(tmp)/'capture.bin'
             p=subprocess.Popen(EMULATOR+[CLI,'--tui','--port',os.ttyname(port),'--log',str(log)],stdin=screen,stdout=screen,stderr=screen,close_fds=True)
-            output=bytearray()
+            output=bytearray(); cursor=0; stop_reader=threading.Event()
+            # Drain continuously like a real terminal. macOS has a small PTY
+            # output queue; pausing reads during serial assertions deadlocks UI.
+            def drain():
+                while not stop_reader.is_set():
+                    ready,_,_=select.select([console],[],[],.05)
+                    if ready:
+                        try: data=os.read(console,65536)
+                        except OSError: return
+                        if not data: return
+                        output.extend(data)
+            reader=threading.Thread(target=drain,daemon=True); reader.start()
             def until(needle, timeout=6):
-                end=time.monotonic()+timeout; start=len(output)
+                nonlocal cursor
+                end=time.monotonic()+timeout
                 while time.monotonic()<end:
-                    if needle in output[start:]: return
-                    ready,_,_=select.select([console],[],[],.1)
-                    if ready: output.extend(os.read(console,65536))
+                    found=output.find(needle,cursor)
+                    if found>=0:
+                        cursor=found+len(needle); return
+                    time.sleep(.01)
                 self.fail('Missing '+repr(needle)+' in '+repr(bytes(output[-3500:])))
             def command(text): os.write(console,b'\x1b'); time.sleep(.08); os.write(console,text.encode()+b'\r')
             try:
@@ -61,7 +83,11 @@ class Console(unittest.TestCase):
                 command('quit'); self.assertEqual(p.wait(timeout=4),0)
                 self.assertEqual(termios.tcgetattr(screen),before)
             finally:
-                if p.poll() is None: p.terminate(); p.wait(timeout=3)
+                if p.poll() is None:
+                    p.terminate()
+                    try: p.wait(timeout=3)
+                    except subprocess.TimeoutExpired: p.kill(); p.wait(timeout=3)
+                stop_reader.set(); reader.join(timeout=1)
                 for fd in (console,screen,wire,port): os.close(fd)
 if __name__=='__main__': unittest.main()
 

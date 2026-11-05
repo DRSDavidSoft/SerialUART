@@ -132,19 +132,19 @@ Build-tree consumers can use `add_subdirectory(SerialUART)` and the same target.
 Linux:
 
 ```sh
-cc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=16384 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
+cc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c lib/linux_native.c examples/protocol.c examples/network.c -o SendCommand
 ```
 
 MinGW-w64:
 
 ```sh
-gcc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=16384 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lcfgmgr32 -lws2_32 -lshell32 -o SendCommand.exe
+gcc -std=c99 -O2 -Ilib -Iexamples -Icli -Ivendor/portable-shell/include -DPS_EDITOR_CAPACITY=33792 -DPS_LINE=1024 SendCommand.c cli/*.c vendor/portable-shell/src/portable_shell.c lib/SerialUART.c examples/protocol.c examples/network.c -lsetupapi -ladvapi32 -lcfgmgr32 -lws2_32 -lshell32 -o SendCommand.exe
 ```
 
 MSVC developer terminal:
 
 ```bat
-cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli /Ivendor\portable-shell\include /DPS_EDITOR_CAPACITY=16384 SendCommand.c cli\tui.c cli\discovery.c vendor\portable-shell\src\portable_shell.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib cfgmgr32.lib ws2_32.lib shell32.lib
+cl /nologo /std:c11 /utf-8 /O2 /Ilib /Iexamples /Icli /Ivendor\portable-shell\include /DPS_EDITOR_CAPACITY=33792 /DPS_LINE=1024 SendCommand.c cli\tui.c cli\discovery.c vendor\portable-shell\src\portable_shell.c cli\session.c cli\options.c cli\profiles.c cli\devices.c cli\keys.c cli\windows_args.c lib\SerialUART.c examples\protocol.c examples\network.c /Fe:SendCommand.exe /link setupapi.lib advapi32.lib cfgmgr32.lib ws2_32.lib shell32.lib
 ```
 
 For macOS omit `lib/linux_native.c` and append

@@ -512,7 +512,8 @@ int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
                 text[511]=0; utf8(text,id,sizeof(id));
                 if(!depth) snprintf(detail.instance_id,sizeof(detail.instance_id),"%.1023s",id);
                 v=strstr(id,"VID_"); q=strstr(id,"PID_");
-                if(!d.vid && v && q) {
+                if(!d.vid && v && q && strlen(v+4)>=4 && strlen(q+4)>=4 &&
+                   strspn(v+4,"0123456789ABCDEFabcdef")>=4 && strspn(q+4,"0123456789ABCDEFabcdef")>=4) {
                     char value[5]; memcpy(value,v+4,4); value[4]=0; d.vid=(unsigned)strtoul(value,NULL,16);
                     memcpy(value,q+4,4); d.pid=(unsigned)strtoul(value,NULL,16);
                 }
@@ -554,9 +555,9 @@ int suart_enumerate_ex(suart_device_info_fn cb,void *ctx) {
         cftext(obj,CFSTR("USB Product Name"),d.name,sizeof(d.name));
         cftext(obj,CFSTR("USB Serial Number"),d.serial,sizeof(d.serial));
         d.vid=cfnumber(obj,CFSTR("idVendor")); d.pid=cfnumber(obj,CFSTR("idProduct"));
+        snprintf(detail.product,sizeof(detail.product),"%s",d.name);
         if(!d.name[0]) snprintf(d.name,sizeof(d.name),"%s",d.path);
         cftext(obj,CFSTR("USB Vendor Name"),detail.manufacturer,sizeof(detail.manufacturer));
-        snprintf(detail.product,sizeof(detail.product),"%s",d.name);
         detail.is_usb=d.vid!=0;
         if(IORegistryEntryGetPath(obj,kIOServicePlane,registry_path)==KERN_SUCCESS)
             snprintf(detail.instance_id,sizeof(detail.instance_id),"%.1023s",registry_path);

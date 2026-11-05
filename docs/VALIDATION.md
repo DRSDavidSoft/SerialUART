@@ -37,6 +37,16 @@ Run `ctest --test-dir build -C Release --output-on-failure` after building.
 Python's standard library drives integration tests. Windows skips PTY-specific
 tests and runs the real socket tests. No test opens arbitrary physical COM ports.
 
+## Interactive workspace checks (2.3)
+
+The console model test drives PortableShell's actual byte handlers: inline
+configuration edits, stale/locked edits, binary validation, selector matching
+and complete escaped history. POSIX PTY tests exercise menu navigation, serial
+connection, background capture, binary send, raw terminal controls and restored
+terminal settings. The test terminal drains output continuously on macOS and
+Linux. Windows runs model, API, JSON discovery, installed-consumer and build
+checks; interactive Windows console and USB devices remain hardware acceptance.
+
 ## Hardware checklist (requires actual devices)
 
 Record OS, compiler/version, commit, executable hash, USB adapter/driver, board

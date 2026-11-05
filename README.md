@@ -12,7 +12,7 @@ Linux, Raspberry Pi OS, and macOS. Use the C ABI from C++, a language binding, o
 the included `SendCommand` executable. The library and CLI use the C runtime and
 native OS APIs; they require no third-party serial, USB, networking, or JSON libraries.
 
-![Serial console replay with fixture device metadata](docs/console.svg)
+![Editable serial settings rendered by PortableShell](docs/console-settings.svg)
 
 *Console replay uses simulated metadata; it is not a hardware capture.*
 

@@ -22,6 +22,8 @@ registry contains SerialUART commands only; it never executes an OS shell.
 Both stdin and stdout must be terminals. Ordinary piping and `--terminal` retain
 their existing byte behavior; no menu is inserted into a pipe.
 
+![Editable connection settings rendered from actual console output](console-settings.svg)
+
 ## Keys and navigation
 
 | Context | Keys |
@@ -45,7 +47,9 @@ Type `help` at the command prompt for the console guide.
   output-line readback through the serial API; those outputs remain Unknown.
 - Explicit DTR/RTS and break actions are available only while connected.
 - **Send hex bytes** validates a draft before sending; the command equivalent is
-  `sendhex 00 FF 0D`. Data is sent once, with the configured write deadline.
+  `sendhex 00 FF 0D`. The form holds 127 characters (up to 63 compact hex
+  bytes); the command accepts up to 256 bytes. Data is sent once, with the
+  configured write deadline.
 - **Receive history** keeps the latest 8192 bytes while menus are open. The text
   view escapes control/high bytes, and **Hex history** shows the latest 1024
   bytes. Views are snapshots; reopen to refresh. Oldest bytes are replaced.
@@ -104,3 +108,11 @@ OS-present device authority, stable identity before remembered port names,
 manufacturer/product fallback, explicit ambiguity and unknown-state reporting.
 The Go runtime, controller protocol/firmware and third-party Go dependencies are
 not imported into SerialUART.
+
+## Preview provenance
+
+The previews use actual PortableShell output from `console_test --preview FILE`
+and `console_test --preview-settings FILE` at 100×30 cells. Fixture metadata is
+clearly marked; no physical board is connected. The upstream
+`tools/terminal_animation.c` renders a PSREPLAY recording of those bytes, then
+usvg/resvg 0.45.1 outline/rasterize Agave text. The Agave license is included.

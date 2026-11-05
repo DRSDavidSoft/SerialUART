@@ -156,6 +156,36 @@ resolution; Windows COM paths compare case-insensitively with an optional
 port-name whitelist. Enumeration never opens device nodes to verify an attached
 UART, so legacy driver placeholders may also be listed.
 
+## Extended discovery (2.3+)
+
+```c
+suart_selector_ex query = {0};
+suart_device_info info;
+query.device.vid = 0x1a86;
+query.match = "CH340"; /* ASCII case-insensitive substring */
+if (suart_resolve_ex(&query, &info) == SUART_OK) {
+    /* info.device.path, info.manufacturer, info.product,
+       info.instance_id, info.location; suart_open remains explicit. */
+}
+```
+
+`suart_enumerate_ex(callback, context)` supplies these records without opening
+ports. Copy any record needed after the callback returns. `suart_device_matches`
+tests the same AND-combined selectors against a record; null or invalid inputs
+return false. Resolution returns `SUART_AMBIGUOUS` for multiple matches and
+`SUART_NOT_FOUND` for none. A path alone may still resolve an unlisted virtual
+port. The extended resolver obtains available metadata even for path queries.
+
+`instance_id` is exact (case-insensitive on Windows); `match` searches path,
+name, serial, manufacturer, product and instance. Empty metadata means unknown.
+Check `problem_known` before using Windows `problem_code`. `is_usb` reports
+positive USB discovery evidence; zero also covers unavailable metadata.
+`suart_discovery_source()` identifies the platform source. Instance topology can
+change when moving USB sockets; prefer a hardware serial where available.
+
+The original structures and functions keep their layouts and signatures. The
+extended API is additive and does not link PortableShell into the library.
+
 ## C++ ownership
 
 ```cpp

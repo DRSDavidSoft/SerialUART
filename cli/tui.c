@@ -28,10 +28,10 @@ struct workspace {
     ps_panel panel; unsigned revision,action,index,count,overflow,cols,rows;
     unsigned reconnect,write_timeout; uint64_t retry,rx,tx;
     int quit,error,output_error,raw,prefix,wanted,pinned,ascii;
-    char path[512],instance[1024],serial[256],argument[512],notice[256];
-    char labels[DEVICE_LIMIT][640],report[16384]; size_t report_size;
+    char path[512],instance[1024],serial[256],argument[PS_LINE],notice[256];
+    char labels[DEVICE_LIMIT][640],report[PS_EDITOR_CAPACITY]; size_t report_size;
     unsigned char history[HISTORY_SIZE]; size_t history_head,history_size;
-    ps_form form; ps_form_field form_field; char hex[512];
+    ps_form form; ps_form_field form_field; char hex[PS_VALUE],detail_label[1024];
 };
 static void safe_text(char *dst,size_t size,const char *src) {
     size_t n=0; while(*src && n+1<size) { unsigned char c=(unsigned char)*src++; dst[n++]=(c<32 || c==127)?' ':(char)c; } dst[n]=0;
@@ -79,10 +79,10 @@ static const char *notice(void *ctx,const ps_menu *menu,unsigned *role) {
 }
 static const char *description(void *ctx,const ps_menu *menu,unsigned index) {
     workspace *w=(workspace *)ctx;
-    if(menu==&w->picker && index<w->count) return w->devices[index].instance_id;
+    if(menu==&w->picker && index<w->count) { safe_text(w->detail_label,sizeof(w->detail_label),w->devices[index].instance_id); return w->detail_label; }
     if(menu==&w->menu) {
         unsigned action=w->actions[index].action;
-        if(action==PORTS) return "Live native discovery. Search the list with /. Selection does not open a port.";
+        if(action==PORTS) return "Search with /. Select first, then Connect.";
         if(action==SETTINGS) return "Edit values in their cells. Serial framing is locked while connected.";
         if(action==CONNECT) return w->port?"Close the port and cancel reconnect.":"Open the selected device with the configured DTR policy.";
         if(action==TERMINAL) return "Full terminal byte stream. Ctrl+] then m returns here; Ctrl+] q quits.";
@@ -149,13 +149,13 @@ static const ps_control serial_controls[]={
     {4,"Serial framing","RTS / CTS",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {5,"Open policy","DTR",PS_CONTROL_CHOICE,0,3,1,dtrs,4},
     {6,"Open policy","Boot wait (ms)",PS_CONTROL_LEVEL,0,60000,100,NULL,0},
-    {7,"Open policy","Reconnect (ms, 0 off)",PS_CONTROL_LEVEL,0,60000,100,NULL,0}};
+    {7,"Open policy","Reconnect ms (0 off)",PS_CONTROL_LEVEL,0,60000,100,NULL,0}};
 static const ps_control terminal_controls[]={
     {8,"Session","Local echo",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {9,"Session","Line editing",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {10,"Session","Display",PS_CONTROL_CHOICE,0,2,1,displays,3},
     {11,"Session","Strip remote titles",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
-    {12,"Session","Enter bytes (hex, blank preserve)",PS_CONTROL_TEXT,0,0,0,NULL,0}};
+    {12,"Session","Enter bytes (hex)",PS_CONTROL_TEXT,0,0,0,NULL,0}};
 static const ps_control_page pages[]={{"Connection",serial_controls,8},{"Terminal",terminal_controls,5}};
 static int read_setting(void *ctx,unsigned id,ps_control_value *v) {
     workspace *w=(workspace *)ctx; const char *p; size_t i;
@@ -247,7 +247,7 @@ static void form_done(ps_session *s,void *ctx,int accepted) {
 }
 static const char *validate_hex(void *ctx,unsigned field,const char *text) {
     unsigned char bytes[256]; size_t n; (void)ctx; (void)field;
-    return suart_hex(text,bytes,sizeof(bytes),&n) || !n?"Enter 1..256 bytes as hex pairs":NULL;
+    return suart_hex(text,bytes,(PS_VALUE-1)/2,&n) || !n?"Enter 1..63 bytes as hex pairs (127 characters max)":NULL;
 }
 static void run_action(workspace *w) {
     unsigned a=w->action; w->action=0; w->error=0;
@@ -337,8 +337,8 @@ int sc_tui_run(sc_session *features,const suart_selector *selector,const suart_c
 #else
     if(!isatty(1)) { fputs("--tui requires a terminal on stdout\n",stderr); return 2; }
 #endif
-    w=(workspace *)calloc(1,sizeof(*w)); if(!w) return 1;
-    w->memory=calloc(1,ps_sizeof_session()); if(!w->memory) { free(w); return 1; }
+    w=(workspace *)calloc(1,sizeof(*w)); if(!w) { result=1; goto cleanup; }
+    w->memory=calloc(1,ps_sizeof_session()); if(!w->memory) { result=1; goto cleanup; }
     w->features=features; w->selector=*selector; w->config=*config; w->reconnect=reconnect; w->write_timeout=timeout;
     dimensions(&w->cols,&w->rows); cfg.write=emit; cfg.context=w; cfg.columns=w->cols; cfg.rows=w->rows;
     cfg.flags=PS_INTERACTIVE|PS_COLOR|PS_UNICODE|PS_NO_OSC|PS_NO_BUILTINS;
@@ -362,8 +362,10 @@ int sc_tui_run(sc_session *features,const suart_selector *selector,const suart_c
         if(w->port) {
             rc=suart_read(w->port,bytes,sizeof(bytes),&n,0);
             if(rc) {
-                int want=w->wanted; disconnect(w); w->wanted=want && w->reconnect; w->error=1; w->retry=suart_millis()+w->reconnect;
+                int want=w->wanted,was_raw=w->raw; disconnect(w); w->wanted=want && w->reconnect; w->error=1; w->retry=suart_millis()+w->reconnect;
+                if(was_raw) ps_start(w->shell);
                 status(w,"Device disconnected%s",w->wanted?"; waiting for pinned identity":"");
+                main_menu(w);
             } else if(n) {
                 for(i=0;i<n;++i) { w->history[w->history_head]=bytes[i]; w->history_head=(w->history_head+1)%HISTORY_SIZE; if(w->history_size<HISTORY_SIZE) ++w->history_size; }
                 w->rx+=n; if(sc_output(features,bytes,n,0)) { result=1; break; }
@@ -389,7 +391,7 @@ int sc_tui_run(sc_session *features,const suart_selector *selector,const suart_c
     if(w->port && suart_wait_tx(w->port,timeout)!=SUART_OK) result=1;
     disconnect(w); ps_close(w->shell); if(w->output_error) result=1;
 cleanup:
-    features->output_silent=1; free(w->memory); free(w);
+    features->output_silent=1; if(w) { free(w->memory); free(w); }
 #ifdef _WIN32
     SetConsoleMode(output,output_mode);
 #endif
