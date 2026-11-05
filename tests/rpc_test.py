@@ -152,10 +152,23 @@ class API(unittest.TestCase):
                     while len(got)<len(payload) and time.monotonic()<end:
                         if select.select([wire],[],[],.1)[0]: got+=os.read(wire,4096)
                     self.assertEqual(got,payload)
-                    os.write(wire,payload);got=b'';end=time.monotonic()+3
+                    # macOS PTY input queues can fill before one 1024-byte write
+                    # returns. Feed concurrently while RPC explicitly drains RX.
+                    os.set_blocking(wire,False);feed_errors=[]
+                    def feed():
+                        offset=0;deadline=time.monotonic()+4
+                        try:
+                            while offset<len(payload):
+                                if time.monotonic()>=deadline: raise TimeoutError('PTY feed deadline')
+                                try: offset+=os.write(wire,payload[offset:])
+                                except BlockingIOError: time.sleep(.002)
+                        except Exception as error: feed_errors.append(error)
+                    writer=threading.Thread(target=feed,daemon=True);writer.start()
+                    got=b'';end=time.monotonic()+5
                     while len(got)<len(payload) and time.monotonic()<end:
                         reply=c.call('port.read',{'max_bytes':4096,'timeout_ms':1000})
                         got+=base64.b64decode(reply['result']['data'])
+                    writer.join(timeout=1);self.assertFalse(writer.is_alive());self.assertFalse(feed_errors,feed_errors)
                     self.assertEqual(got,payload)
                     c.call('port.subscribe');os.write(wire,b'event\0\xff')
                     event=c.receive();self.assertEqual(event['method'],'port.received')
