@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width">
+<title>SerialUART · local control API</title>
+<style>
+body{font:17px/1.6 system-ui;background:#111923;color:#e8eef5;max-width:850px;margin:3rem auto;padding:0 1.5rem}
+h1{font-size:2.4rem;margin-bottom:0}p{color:#aebed0}button,input,textarea{font:inherit;background:#1d2b3c;color:inherit;border:1px solid #52657c;border-radius:7px;padding:.6rem;margin:.3rem 0}button{cursor:pointer}button:disabled{opacity:.4;cursor:default}textarea{width:100%;box-sizing:border-box;font:14px/1.5 monospace}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#172333;padding:1rem;border-radius:8px;max-height:32rem;overflow:auto}#status{color:#71dbb4}
+</style>
+<h1>SerialUART</h1><p>Local WebSocket control · explicit connections · binary serial data</p>
+<label>API address <input id="address" value="ws://127.0.0.1:8765/rpc" size="32"></label>
+<button id="connect">Connect</button><button id="disconnect" disabled>Disconnect</button>
+<p id="status" role="status">Disconnected. Connecting to the API does not open a serial port.</p>
+<button id="devices" disabled>List devices</button><button id="portStatus" disabled>Port status</button>
+<label for="request">JSON-RPC request</label>
+<textarea id="request" rows="5">{"jsonrpc":"2.0","id":1,"method":"system.info"}</textarea>
+<button id="send" disabled>Send request</button><button id="clear">Clear log</button>
+<pre id="log" aria-label="API messages"></pre>
+<script>
+'use strict';
+const el=id=>document.getElementById(id);let socket=null,nextId=10;
+function log(text){el('log').textContent=(el('log').textContent+text+'\n').slice(-65536);}
+function state(ready,message){el('status').textContent=message;for(const id of ['disconnect','devices','portStatus','send'])el(id).disabled=!ready;el('connect').disabled=socket!==null;}
+function send(value){if(socket&&socket.readyState===WebSocket.OPEN){const text=JSON.stringify(value);socket.send(text);log('→ '+text);}}
+el('connect').onclick=()=>{
+ try{socket=new WebSocket(el('address').value);state(false,'Connecting…');}
+ catch(error){socket=null;state(false,error.message);return;}
+ socket.onopen=()=>state(true,'Connected to API. Serial port opens only through port.open.');
+ socket.onmessage=event=>log('← '+event.data);
+ socket.onerror=()=>log('Connection failed. Check the server and exact --origin value.');
+ socket.onclose=()=>{socket=null;state(false,'Disconnected. The server closes the owned serial port.');};
+};
+el('disconnect').onclick=()=>socket.close();
+el('devices').onclick=()=>send({jsonrpc:'2.0',id:nextId++,method:'devices.list'});
+el('portStatus').onclick=()=>send({jsonrpc:'2.0',id:nextId++,method:'port.status'});
+el('send').onclick=()=>{try{send(JSON.parse(el('request').value));}catch(error){log(error.message);}};
+el('clear').onclick=()=>{el('log').textContent='';};
+</script></html>

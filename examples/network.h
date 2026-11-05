@@ -3,6 +3,7 @@
 #include <stddef.h>
 typedef struct suart_net suart_net;
 /* One client, bounded queues, loopback by default. mode=tcp/ws/socketio.
+ * Internal rpc-ws mode accepts text at /rpc and supplies NDJSON delimiters.
  * connect_mode is TCP-only. Origin NULL rejects all browser Origins. */
 suart_net *suart_net_open(const char *mode,const char *host,unsigned port,int connect_mode,const char *origin);
 void suart_net_close(suart_net *);

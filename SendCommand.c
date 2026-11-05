@@ -1,9 +1,21 @@
 #define _POSIX_C_SOURCE 200809L
 #include "SerialUART.h"
 #include "protocol.h"
+#ifdef SUART_FULL_APP
 #include "network.h"
-#include "session.h"
 #include "tui.h"
+#include "rpc.h"
+#define APP_NAME "SerialUART"
+#else
+#define APP_NAME "SendCommand"
+/* The mini executable does not link networking, RPC or PortableShell. */
+typedef void suart_net;
+static suart_net *suart_net_open(const char *m,const char *h,unsigned p,int c,const char *o) { (void)m;(void)h;(void)p;(void)c;(void)o;return NULL; }
+static void suart_net_close(suart_net *n) { (void)n; }
+static int suart_net_read(suart_net *n,void *b,size_t c,size_t *s) { (void)n;(void)b;(void)c;*s=0;return -1; }
+static int suart_net_write(suart_net *n,const void *b,size_t s) { (void)n;(void)b;(void)s;return -1; }
+#endif
+#include "session.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -129,10 +141,11 @@ static int offline_terminal(int *escape) {
     return 0;
 }
 static void help(void) {
-    puts("SerialUART " SUART_VERSION " | portable serial library and terminal\n"
-         "Usage: SendCommand [selection] [configuration] [mode]\n\n"
+    puts(APP_NAME " " SUART_VERSION " | portable serial communication\n"
+         "Usage: " APP_NAME " [selection] [configuration] [mode]\n\n"
          "Select a device (filters combine; ambiguous matches are rejected):\n"
-         "  --list                    List paths, friendly names, VID:PID, serial\n"
+         "  --list-devices            List native device names, USB IDs and identities\n"
+         "  --output-format text|json|ndjson  Device listing format (default text)\n"
          "  -p, --port PATH            COM12, /dev/ttyACM0, /dev/cu.usbmodem...\n"
          "  --name NAME               Exact friendly name (quote spaces)\n"
          "  --vid HEX --pid HEX        USB vendor and product IDs\n"
@@ -143,7 +156,15 @@ static void help(void) {
          "  --rts-cts                 Hardware flow control\n"
          "  --dtr keep|off|on|reset    Reset deasserts 100ms then asserts DTR\n"
          "  --boot-wait MS            Wait after every successful open (0..60000)\n\n"
+#ifdef SUART_FULL_APP
+         "Modes (default: interactive workspace):\n"
+         "  --interactive            Open menus, settings and serial terminal\n"
+         "  --pipe                   Binary stdin -> serial -> stdout\n"
+         "  --api stdio|tcp|websocket  Headless JSON-RPC / NDJSON API\n"
+         "  --api-port PORT          Local TCP/WebSocket API port (default 8765)\n"
+#else
          "Modes (default: binary stdin -> serial -> stdout):\n"
+#endif
          "  -s, --send TEXT            Send text, receive until idle timeout\n"
          "  --sendline TEXT            Send text followed by LF\n"
          "  --hex HEX                 Send binary, e.g. \"00 41 FF 0D 0A\"\n"
@@ -152,25 +173,33 @@ static void help(void) {
          "  --write-timeout MS        Write/TX queue deadline (1..60000, default 2000)\n"
          "  --discard-input           Explicitly discard RX after opening\n"
          "  --show-config             Report driver settings and modem bits to stderr\n"
-         "  --tui                     Interactive menus, settings and serial workspace\n"
-         "  --list-json / --list-details  Extended native device identities (no opens)\n"
          "  --instance ID / --match TEXT  Exact OS instance / metadata search\n"
          "  --terminal                Raw terminal; Ctrl+] then ? for shortcuts\n"
          "  --receive                 Receive only; stdin is ignored\n"
          "  --timeout MS              Idle timeout after send/EOF (default 1000)\n"
          "  --reconnect MS            Retry missing/lost port (10..60000)\n"
-         "  --listen tcp|ws|socketio HOST PORT   Serve one network peer\n"
+#ifdef SUART_FULL_APP
+         "  --listen tcp|ws|socketio HOST PORT   Serve one raw serial peer\n"
          "  --connect tcp HOST PORT    Connect serial bridge to a TCP server\n"
-         "  --origin ORIGIN            Exact browser Origin allowed for WS\n"
+         "  --origin ORIGIN          Exact browser Origin allowed for WebSocket\n"
+#endif
          "  -q, --quiet               Suppress connection status (stderr)\n"
          "  -h, --help | --version\n\n"
          "Examples:\n"
          "  SendCommand --list\n"
          "  SendCommand -p COM12 -b 115200 --dtr reset --boot-wait 2000 -s STATUS\n"
          "  SendCommand --vid 2341 --pid 0043 --terminal --reconnect 1000\n"
-         "  SendCommand -p /dev/ttyUSB0 --listen ws 127.0.0.1 8765\n\n"
+#ifdef SUART_FULL_APP
+         "  SerialUART --api stdio\n"
+         "  SerialUART --api websocket --api-port 8765\n"
+#else
+         "  SerialUART opens the full interactive application.\n"
+#endif
+         "\n"
          "Exit: 0 normal, 1 I/O failure, 2 usage/selection, 124 no response.\n"
-         "Network modes have no authentication/TLS; use a trusted local tunnel.\n"
+#ifdef SUART_FULL_APP
+         "API listens on loopback; network modes have no authentication/TLS.\n"
+#endif
          "DTR off/keep cannot prevent all driver-induced Arduino reset pulses.\n"
          "Mark/space parity requires driver support; 1.5 stop bits requires Windows/5 data bits.");
 }
@@ -206,7 +235,9 @@ static void show_config(suart_port *p) {
 int main(int argc,char **argv) {
     suart_config c; suart_selector sel={0}; suart_port *port=NULL; suart_device device;
     suart_net *net=NULL; const char *send_text=NULL,*hex=NULL,*mode=NULL,*host=NULL,*origin=NULL;
-    unsigned timeout=1000,reconnect=0,net_port=0; int raw=0,tui=0,list_extended=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
+    unsigned timeout=1000,reconnect=0,net_port=0,api_port=8765;
+    const char *api=NULL;int pipe_mode=0,interactive=0,format=0,format_set=0,api_port_set=0;
+    int raw=0,list_extended=0,receive=0,quiet=0,client=0,ok=1,i,rc=0;
     int eof=0,escape=0,received=0,sent_command=0; uint64_t last=0,retry=0;
     int newline=0,until=-1,discard_input=0,diagnostics=0,tx_waited=0;
     uint64_t reply_end=0,tx_end=0;
@@ -221,9 +252,18 @@ int main(int argc,char **argv) {
         if(feature==1) continue;
         if(!strcmp(a,"--help") || !strcmp(a,"-h")) { help(); sc_help(); return 0; }
         if(!strcmp(a,"--version")) { puts(SUART_VERSION); return 0; }
-        if(!strcmp(a,"--tui")) { tui=1; raw=1; continue; }
-        if(!strcmp(a,"--list-json")) { list_extended=1; continue; }
-        if(!strcmp(a,"--list-details")) { list_extended=2; continue; }
+        if(!strcmp(a,"--tui") || !strcmp(a,"--list-json") || !strcmp(a,"--list-details")) {
+            fputs("Use SerialUART for the interactive application, or --list-devices --output-format json for device JSON.\n",stderr);return 2;
+        }
+        if(!strcmp(a,"--list-devices")) { list_extended=1;continue; }
+        if(!strcmp(a,"--pipe")) { pipe_mode=1;continue; }
+#ifdef SUART_FULL_APP
+        if(!strcmp(a,"--interactive")) { interactive=1;raw=1;continue; }
+#else
+        if(!strcmp(a,"--interactive") || !strcmp(a,"--api") || !strcmp(a,"--listen") || !strcmp(a,"--connect") || !strcmp(a,"--origin")) {
+            fputs("Use SerialUART for interactive, API and network modes.\n",stderr);return 2;
+        }
+#endif
         if(!strcmp(a,"--terminal")) { raw=1; continue; }
         if(!strcmp(a,"--receive")) { receive=1; continue; }
         if(!strcmp(a,"--rts-cts")) { c.rts_cts=1; continue; }
@@ -232,7 +272,15 @@ int main(int argc,char **argv) {
         if(!strcmp(a,"--quiet") || !strcmp(a,"-q")) { quiet=1; continue; }
         if(i+1>=argc) { fprintf(stderr,"Missing value for %s\n",a); return 2; }
         v=argv[++i];
-        if(!strcmp(a,"--port") || !strcmp(a,"-p")) sel.path=v;
+        if(!strcmp(a,"--output-format")) {
+            format_set=1;
+            if(!strcmp(v,"text")) format=0;else if(!strcmp(v,"json")) format=1;else if(!strcmp(v,"ndjson")) format=2;else ok=0;
+        }
+#ifdef SUART_FULL_APP
+        else if(!strcmp(a,"--api")) { if(api) ok=0;api=v;if(strcmp(v,"stdio") && strcmp(v,"tcp") && strcmp(v,"websocket")) ok=0; }
+        else if(!strcmp(a,"--api-port")) { api_port_set=1;api_port=number(v,65535,10,&ok);if(!api_port) ok=0; }
+#endif
+        else if(!strcmp(a,"--port") || !strcmp(a,"-p")) sel.path=v;
         else if(!strcmp(a,"--instance")) features.instance_id=v;
         else if(!strcmp(a,"--match")) features.match=v;
         else if(!strcmp(a,"--name")) sel.name=v;
@@ -275,7 +323,9 @@ int main(int argc,char **argv) {
         }
         if(!ok) { fprintf(stderr,"Invalid value for %s: %s\n",a,v); return 2; }
     }
-    if(list_extended) return sc_list_extended(&features,&sel,list_extended==1)?1:0;
+    if(format_set && !list_extended) { fputs("--output-format requires --list-devices\n",stderr);return 2; }
+    if(api_port_set && (!api || !strcmp(api,"stdio"))) { fputs("--api-port requires --api tcp or --api websocket\n",stderr);return 2; }
+    if(list_extended) return sc_list_extended(&features,&sel,format)?1:0;
     if(features.list_kind) {
         if(features.list_kind<=2) return sc_list(&features)?1:0;
         if(features.list_kind==3) sc_boards(&features);
@@ -283,8 +333,14 @@ int main(int argc,char **argv) {
         if(features.list_kind==5) sc_settings(argc,argv);
         return 0;
     }
-    if(!ok || (send_text && hex) || (raw+receive+(send_text!=NULL || hex!=NULL)+(mode!=NULL)>1) ||
-       (origin && !mode) || (client && strcmp(mode,"tcp")) ||
+#ifdef SUART_FULL_APP
+    if(!raw && !receive && !send_text && !hex && !mode && !api && !pipe_mode) { interactive=1;raw=1; }
+#else
+    (void)api_port;
+#endif
+    if(!ok || (send_text && hex) || (raw+receive+pipe_mode+(send_text!=NULL || hex!=NULL)+(mode!=NULL)+(api!=NULL)>1) ||
+       (origin && !mode && (!api || strcmp(api,"websocket"))) || (client && strcmp(mode,"tcp")) ||
+       (mode && strcmp(mode,"tcp") && strcmp(mode,"ws") && strcmp(mode,"socketio")) ||
        (until>=0 && (raw || mode || (!receive && !send_text && !hex)))) {
         fputs("Conflicting modes or invalid network arguments; see --help\n",stderr); return 2;
     }
@@ -292,8 +348,11 @@ int main(int argc,char **argv) {
        (mode && (features.display || features.force_newline || features.no_status || features.log_display))) {
         fputs("Terminal controls require --terminal; display transforms require a stdout mode\n",stderr); return 2;
     }
-    if(tui && (discard_input || diagnostics || features.exit_key)) { fputs("--tui uses explicit console actions; omit --discard-input, --show-config and --exit-key\n",stderr); return 2; }
+    if(interactive && (discard_input || diagnostics || features.exit_key)) { fputs("Interactive mode uses explicit console actions; omit --discard-input, --show-config and --exit-key\n",stderr); return 2; }
+    if(api && (discard_input || diagnostics || reconnect || features.auto_connect || c.boot_wait_ms>10000)) { fputs("API mode uses explicit RPC actions; omit discard, diagnostics and automatic reconnect options (boot wait <=10000).\n",stderr);return 2; }
+#ifndef SUART_FULL_APP
     if(argc==1) { help(); return 2; }
+#endif
     if(send_text) { command_len=strlen(send_text); if(command_len>sizeof(command)-(size_t)newline) return 2; memcpy(command,send_text,command_len); if(newline) command[command_len++]='\n'; }
     if(hex && suart_hex(hex,command,sizeof(command),&command_len)) { fputs("Invalid hex bytes\n",stderr); return 2; }
     signal(SIGINT,stop); signal(SIGTERM,stop);
@@ -304,7 +363,10 @@ int main(int argc,char **argv) {
     if(input_init(raw)) { fputs("Cannot configure terminal\n",stderr); return 1; }
     setvbuf(stdout,NULL,_IONBF,0);
     if(sc_output_open(&features)) { rc=1; goto done; }
-    if(tui) { rc=sc_tui_run(&features,&sel,&c,reconnect,write_timeout,input_read,&stopping); goto done; }
+#ifdef SUART_FULL_APP
+    if(interactive) { rc=sc_tui_run(&features,&sel,&c,reconnect,write_timeout,input_read,&stopping); goto done; }
+    if(api) { rc=sc_rpc_run(api,api_port,origin,&features,&sel,&c,input_read,&stopping);goto done; }
+#endif
     if(mode) {
         net=suart_net_open(mode,host,net_port,client,origin);
         if(!net) { fputs("Cannot open network adapter\n",stderr); rc=1; goto done; }

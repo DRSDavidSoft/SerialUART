@@ -255,7 +255,7 @@ class SerialPTY(unittest.TestCase):
         t = threading.Thread(target=board)
         t.start()
         try:
-            p = subprocess.run(EMULATOR + [CLI, "-p", os.ttyname(slave), "--timeout", "300", "-q"],
+            p = subprocess.run(EMULATOR + [CLI, "--pipe", "-p", os.ttyname(slave), "--timeout", "300", "-q"],
                                input=data, capture_output=True, timeout=15)
             self.assertEqual(p.returncode, 0, p.stderr)
             self.assertEqual(p.stdout, data)

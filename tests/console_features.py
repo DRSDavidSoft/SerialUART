@@ -5,21 +5,21 @@ EMULATOR = shlex.split(os.environ.get('SUART_EMULATOR', ''))
 sys.argv[1:] = []
 class Console(unittest.TestCase):
     def test_json_and_closed_output(self):
-        p = subprocess.run(EMULATOR+[CLI,'--list-json'], capture_output=True, timeout=10)
+        p = subprocess.run(EMULATOR+[CLI,'--list-devices','--output-format','json'], capture_output=True, timeout=10)
         self.assertEqual(p.returncode,0,p.stderr)
         for device in json.loads(p.stdout):
             self.assertIsInstance(device['instance_id'],str)
             self.assertIn('manufacturer',device)
             self.assertIn('problem_code',device)
-        p = subprocess.run(EMULATOR+[CLI,'--tui'],input=b'quit\n',capture_output=True,timeout=5)
+        p = subprocess.run(EMULATOR+[CLI,'--interactive'],input=b'quit\n',capture_output=True,timeout=5)
         self.assertNotEqual(p.returncode,0)
     def test_profile_console_and_metadata_flags(self):
         with tempfile.TemporaryDirectory() as tmp:
             profile=pathlib.Path(tmp)/'console.cfg'
-            profile.write_text('--tui\n--match QinHeng\n--instance USB-fixture\n')
+            profile.write_text('--interactive\n--match QinHeng\n--instance USB-fixture\n')
             p=subprocess.run(EMULATOR+[CLI,'--config',str(profile),'--list-settings'],capture_output=True,timeout=5)
             self.assertEqual(p.returncode,0,p.stderr)
-            self.assertIn(b'--tui',p.stdout)
+            self.assertIn(b'--interactive',p.stdout)
             self.assertIn(b'QinHeng',p.stdout)
             self.assertIn(b'USB-fixture',p.stdout)
     @unittest.skipIf(os.name=='nt','requires POSIX pseudo terminals')
@@ -30,7 +30,7 @@ class Console(unittest.TestCase):
         before=termios.tcgetattr(screen)
         with tempfile.TemporaryDirectory() as tmp:
             log=pathlib.Path(tmp)/'capture.bin'
-            p=subprocess.Popen(EMULATOR+[CLI,'--tui','--port',os.ttyname(port),'--log',str(log)],stdin=screen,stdout=screen,stderr=screen,close_fds=True)
+            p=subprocess.Popen(EMULATOR+[CLI,'--port',os.ttyname(port),'--log',str(log)],stdin=screen,stdout=screen,stderr=screen,close_fds=True)
             output=bytearray(); cursor=0; stop_reader=threading.Event()
             # Drain continuously like a real terminal. macOS has a small PTY
             # output queue; pausing reads during serial assertions deadlocks UI.

@@ -70,7 +70,7 @@ static void drop(suart_net *n) {
 }
 suart_net *suart_net_open(const char *mode,const char *host,unsigned port,int client,const char *origin) {
     struct addrinfo hints,*list=NULL,*a; char service[16]; socket_t s=BAD; suart_net *n;
-    int kind=!strcmp(mode,"tcp")?0:!strcmp(mode,"ws")?1:!strcmp(mode,"socketio")?2:-1;
+    int kind=!strcmp(mode,"tcp")?0:!strcmp(mode,"ws")?1:!strcmp(mode,"socketio")?2:!strcmp(mode,"rpc-ws")?3:-1;
     if(kind<0 || (client && kind) || !port || port>65535) return NULL;
 #ifdef _WIN32
     { WSADATA w; if(WSAStartup(MAKEWORD(2,2),&w)) return NULL; }
@@ -145,7 +145,8 @@ static int handshake(suart_net *n) {
     line=strstr(n->http,"\r\n"); if(!line) return -1; *line=0;
     if(n->mode==2) {
         if(strcmp(n->http,"GET /socket.io/?EIO=4&transport=websocket HTTP/1.1")) return -1;
-    } else if(strcmp(n->http,"GET / HTTP/1.1") && strcmp(n->http,"GET /serial HTTP/1.1")) return -1;
+    } else if(n->mode==3) { if(strcmp(n->http,"GET /rpc HTTP/1.1")) return -1; }
+    else if(strcmp(n->http,"GET / HTTP/1.1") && strcmp(n->http,"GET /serial HTTP/1.1")) return -1;
     p=line+2;
     while((line=strstr(p,"\r\n")) && line!=p) {
         char *colon; *line=0; colon=strchr(p,':'); if(!colon) return -1; *colon++=0;
@@ -187,6 +188,12 @@ static int message(unsigned op,const unsigned char *b,size_t len,void *ctx) {
         if(!n->connected || len<start+2 || memcmp(b,prefix,start) || b[len-2]!='"' || b[len-1]!=']') return -1;
         if(suart_unbase64((const char *)b+start,len-start-2,n->queue+n->queued,sizeof(n->queue)-n->queued,&decoded)) return -1;
         n->queued+=decoded; return 0;
+    }
+    if(n->mode==3) {
+        if(op!=1 || n->queued+len+1>sizeof(n->queue)) return -1;
+        memcpy(n->queue+n->queued,b,len);n->queued+=len;
+        if(!len || b[len-1]!='\n') n->queue[n->queued++]='\n';
+        return 0;
     }
     if(n->queued+len>sizeof(n->queue)) return -1;
     memcpy(n->queue+n->queued,b,len); n->queued+=len; return 0;
@@ -236,7 +243,7 @@ int suart_net_write(suart_net *n,const void *data,size_t len) {
     /* No peer means incoming serial data is deliberately discarded. */
     if(n->peer==BAD || !n->ready || (n->mode==2 && !n->connected)) return 0;
     if(n->mode==0) rc=sendall(n->peer,data,len);
-    else if(n->mode==1) rc=frame(n,2,data,len);
+    else if(n->mode==1 || n->mode==3) rc=frame(n,n->mode==3?1:2,data,len);
     else {
         char b[8192]; size_t size;
         if(len>4096) return -1;

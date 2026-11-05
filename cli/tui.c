@@ -337,9 +337,9 @@ int sc_tui_run(sc_session *features,const suart_selector *selector,const suart_c
     static const unsigned actions[]={MENU,PORTS,SETTINGS,CONNECT,CONNECT,TERMINAL,DETAILS,HISTORY,HEX_HISTORY,SEND_HEX,SIGNALS,HELP,QUIT};
 #ifdef _WIN32
     DWORD output_mode; HANDLE output=GetStdHandle(STD_OUTPUT_HANDLE);
-    if(!GetConsoleMode(output,&output_mode) || !SetConsoleMode(output,output_mode|ENABLE_VIRTUAL_TERMINAL_PROCESSING)) { fputs("--tui requires a VT-capable console\n",stderr); return 2; }
+    if(!GetConsoleMode(output,&output_mode) || !SetConsoleMode(output,output_mode|ENABLE_VIRTUAL_TERMINAL_PROCESSING)) { fputs("SerialUART interactive mode requires a VT-capable console\n",stderr); return 2; }
 #else
-    if(!isatty(1)) { fputs("--tui requires a terminal on stdout\n",stderr); return 2; }
+    if(!isatty(1)) { fputs("SerialUART interactive mode requires a terminal on stdout\n",stderr); return 2; }
 #endif
     w=(workspace *)calloc(1,sizeof(*w)); if(!w) { result=1; goto cleanup; }
     w->memory=calloc(1,ps_sizeof_session()); if(!w->memory) { result=1; goto cleanup; }

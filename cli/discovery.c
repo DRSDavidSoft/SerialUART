@@ -20,7 +20,7 @@ static int show(const suart_device_info *d,void *context) {
     sc_board(l->session,&d->device,board,sizeof(board));
     if(l->session->board_name && strcmp(l->session->board_name,board)) return 0;
     if(l->json) {
-        if(!l->first) putchar(',');
+        if(l->json==1 && !l->first) putchar(',');
         l->first=0; putchar('{');
         field("path",d->device.path,1); field("name",d->device.name,0);
         field("manufacturer",d->manufacturer,0); field("product",d->product,0);
@@ -28,7 +28,7 @@ static int show(const suart_device_info *d,void *context) {
         field("location",d->location,0); field("board",board,0);
         printf(",\"vid\":%u,\"pid\":%u,\"is_usb\":%s,\"problem_code\":",d->device.vid,d->device.pid,d->is_usb?"true":"false");
         if(d->problem_known) printf("%u",d->problem_code); else fputs("null",stdout);
-        putchar('}');
+        putchar('}');if(l->json==2) putchar('\n');
     } else {
         /* Printable escaped strings keep device metadata from injecting controls. */
         field("port",d->device.path,1); field("name",d->device.name,0); putchar('\n');
@@ -44,9 +44,9 @@ static int show(const suart_device_info *d,void *context) {
 int sc_list_extended(sc_session *session,const suart_selector *selector,int json) {
     listing l; int result; memset(&l,0,sizeof(l)); l.session=session; l.selector.device=*selector;
     l.selector.instance_id=session->instance_id; l.selector.match=session->match; l.json=json; l.first=1;
-    if(json) putchar('['); else printf("%s\n\n",suart_discovery_source());
+    if(json==1) putchar('['); else if(!json) printf("%s\n\n",suart_discovery_source());
     result=suart_enumerate_ex(show,&l);
-    if(json) puts("]");
+    if(json==1) puts("]");
     if(result) fprintf(stderr,"Device enumeration failed: %d\n",result);
     return result;
 }

@@ -1,3 +1,4 @@
+import json
 import os
 import pathlib
 import subprocess
@@ -38,7 +39,7 @@ int main(void) {
     subprocess.run([str(exe)], check=True, env=env)
     cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
     version = subprocess.check_output([str(cli), "--version"], env=env).strip()
-    if version != b"2.3.0":
+    if version != b"2.4.0":
         raise SystemExit("Installed executable version differs from expected package")
     manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
     if not manifest or "Source commit:" not in manifest[0].read_text():
@@ -52,3 +53,12 @@ int main(void) {
         raise SystemExit("Embedded PortableShell license is missing")
     if not (docs / "examples/profiles/circuitpython.cfg").is_file():
         raise SystemExit("Example terminal profile is missing")
+
+    app = prefix / "bin" / ("SerialUART.exe" if os.name == "nt" else "SerialUART")
+    assert subprocess.check_output([str(app), "--version"], env=env).strip() == version
+    request = b'{"jsonrpc":"2.0","id":1,"method":"system.info"}\n'
+    result = subprocess.run([str(app), "--api", "stdio"], input=request,
+                            capture_output=True, check=True, timeout=10, env=env)
+    assert json.loads(result.stdout)["result"]["application"] == "SerialUART"
+    assert (docs / "docs/RPC.md").is_file()
+    assert (docs / "examples/rpc_client.py").is_file()
