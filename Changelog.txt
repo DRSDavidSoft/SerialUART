@@ -1,3 +1,8 @@
+v2.4.1
+  Ship the centered settings dialog with PortableShell table styling.
+  Embed a multi-resolution SerialUART icon and Windows version information
+  in SerialUART.exe, SendCommand.exe and SerialLoopback.exe.
+
 v2.4.0
   Separate mini SendCommand and full SerialUART executables. SerialUART opens the
   PortableShell workspace by default; --send, --pipe and --terminal select other modes.
