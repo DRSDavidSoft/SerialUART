@@ -68,13 +68,15 @@ static void menu_draw(ps_session *s){
         if(s->menu_description&&m->count)d=s->menu_description(s->menu_description_context,m,s->menu_selected);
         if(!d)d=m->count&&m->items[s->menu_selected].submenu?"Open submenu":"Run selected action";
         at(s,5,px);field(s,d,pw);
-        at(s,7,px);footer_field(s,(s->io.flags&PS_UNICODE)?"↑/↓ Select   Enter Open":"Up/Down Select  Enter Open",pw,0);
-        at(s,8,px);footer_field(s,"Esc Back   Ctrl-C Close",pw,0);
+        if(!s->panel_dialog_columns){at(s,7,px);footer_field(s,(s->io.flags&PS_UNICODE)?"↑/↓ Select   Enter Open":"Up/Down Select  Enter Open",pw,0);
+        at(s,8,px);footer_field(s,"Esc Back   Ctrl-C Close",pw,0);}
     }
+    if(!s->panel_dialog_columns){
     if(!pane){at(s,s->io.rows,1);view_color(s,"\033[33m");
     footer_field(s,(s->io.flags&PS_UNICODE)?"↑/↓ Select  Enter Open  Esc Back  0 Close/back":"Up/Down Select  Enter Open  Esc Back",s->io.columns-1,0);reset(s);}
     if(pane)at(s,10,x+w+3);else at(s,s->io.rows-1,2);out(s,"Select: ");if(s->menu_bad)out(s,"Invalid selection");else raw(s,s->menu_input,s->menu_length);
-    ansi(s,"\033[K");frame_end(s);
+    ansi(s,"\033[K");}
+    frame_end(s);
 }
 PS_API void ps_menu_set_style(ps_session *s,unsigned flags){if(!s)return;ps_menu_close(s);s->menu_style=flags;}
 PS_API void ps_menu_set_description(ps_session *s,ps_menu_description_fn fn,void *ctx){if(s){s->menu_description=fn;s->menu_description_context=ctx;}}
@@ -97,6 +99,7 @@ PS_API unsigned ps_menu_active(const ps_session *s){return s?s->menu_depth:0;}
 PS_API void ps_menu_refresh(ps_session *s){
     unsigned i,w;const ps_menu *m;
     if(!s||!s->menu_depth)return;
+    if(s->panel_dialog_columns){s->dirty=1;return;}
 #if PS_MENU_LIST_VIEW
     if(menu_list(s)){if(!s->menu_screen){ansi(s,"\033[?1049h");s->menu_screen=1;}if(PS_MOUSE)ansi(s,"\033[?1002h\033[?1006h");list_draw(s);return;}
 #endif
@@ -119,6 +122,7 @@ PS_API void ps_menu_refresh(ps_session *s){
 }
 PS_API void ps_menu_close(ps_session *s){
     if(!s)return;
+    if(s->panel_dialog_columns)table_close(s);
     s->canvas_kind=0;
     if(s->menu_screen){if(PS_MOUSE)ansi(s,"\033[?1002l\033[?1006l");ansi(s,"\033[0m\033[?25h\033[?1049l");s->menu_screen=0;}
     s->menu_depth=s->menu_length=s->menu_bad=0;list_reset(s);
@@ -133,7 +137,7 @@ PS_API int ps_menu_open(ps_session *s,const ps_menu *menu){
 }
 PS_API int ps_menu_choose(ps_session *s,unsigned number){
     const ps_menu *m;const ps_menu_item *item;
-    if(!s||!s->menu_depth)return 2;
+    if(!s||!s->menu_depth||s->panel_dialog_columns)return 2;
     m=s->menu_stack[s->menu_depth-1];
     if(!number){s->menu_selected=s->menu_top=0;list_reset(s);if(--s->menu_depth){
 #if PS_MENU_CONTEXT

@@ -14,7 +14,7 @@ int main(int argc,char **argv) {
     CHECK(w && f); sc_init(f); w->features=f; suart_config_init(&w->config);
     w->memory=calloc(1,ps_sizeof_session()); CHECK(w->memory); w->shell=ps_init(w->memory,ps_sizeof_session(),&cfg); CHECK(w->shell);
     w->panel.title="Serial settings"; w->panel.status="Disconnected | changes apply on Connect";
-    w->panel.pages=pages; w->panel.count=2; w->panel.read=read_setting; w->panel.write=write_setting; w->panel.context=w;
+    w->panel.pages=pages; w->panel.count=1; w->panel.read=read_setting; w->panel.write=write_setting; w->panel.context=w;
     CHECK(ps_panel_attach(w->shell,&w->panel)); ps_start(w->shell);
     memset(&v,0,sizeof(v)); strcpy(v.text,"115200"); CHECK(write_setting(w,0,&v,0)); CHECK(w->config.baud==115200);
     strcpy(v.text,"4000001"); CHECK(!write_setting(w,0,&v,1)); CHECK(w->config.baud==115200);
@@ -27,9 +27,20 @@ int main(int argc,char **argv) {
       CHECK(validate_hex(w,0,pairs)!=NULL); }
     main_menu(w); CHECK(ps_menu_active(w->shell)); CHECK(strstr(captured,"Serial workspace"));
     CHECK(ps_menu_choose(w->shell,2)==0); CHECK(w->action==SETTINGS); run_action(w); CHECK(ps_panel_active(w->shell));
+    CHECK(ps_menu_active(w->shell));
+    CHECK(ps_menu_choose(w->shell,1)==2); /* the dialog owns input */
+    CHECK(strstr(captured,"Local echo") && !strstr(captured,"F2"));
+    {
+        unsigned id;
+        ps_key(w->shell,PS_KEY_RIGHT); CHECK(ps_panel_selection(w->shell,&id) && id==1);
+        ps_key(w->shell,PS_KEY_DOWN); CHECK(ps_panel_selection(w->shell,&id) && id==3);
+        ps_resize(w->shell,46,10);
+        ps_key(w->shell,PS_KEY_DOWN); CHECK(ps_panel_selection(w->shell,&id) && id==4);
+        ps_resize(w->shell,100,30);
+    }
     CHECK(ps_panel_select(w->shell,0)); ps_key(w->shell,13); ps_key(w->shell,21);
     ps_feed(w->shell,"31250",5); ps_key(w->shell,13); CHECK(w->config.baud==31250); /* inline editor */
-    ps_key(w->shell,27);
+    ps_key(w->shell,27); CHECK(!ps_panel_active(w->shell) && ps_menu_active(w->shell));
     memset(&selector,0,sizeof(selector)); memset(&device,0,sizeof(device)); strcpy(device.device.path,"COM18");
     strcpy(device.manufacturer,"QinHeng"); strcpy(device.device.name,"USB-SERIAL CH340"); strcpy(device.instance_id,"USB\\VID_1A86&PID_7523\\A"); device.device.vid=0x1a86; device.device.pid=0x7523;
     selector.match="qinheng"; CHECK(suart_device_matches(&selector,&device)); selector.device.pid=0x1234; CHECK(!suart_device_matches(&selector,&device)); selector.device.pid=0;
@@ -54,9 +65,9 @@ int main(int argc,char **argv) {
     memset(&device,0,sizeof(device)); strcpy(device.device.path,"COM18"); strcpy(device.device.name,"USB-SERIAL CH340");
     if(argc==3 && (!strcmp(argv[1],"--preview") || !strcmp(argv[1],"--preview-settings"))) {
         FILE *out; capture_size=0; ps_close(w->shell); ps_start(w->shell);
-        w->config.baud=115200; w->identity=device; snprintf(w->notice,sizeof(w->notice),"Disconnected | USB-SERIAL CH340 (fixture) | 115200 baud");
+        w->config.baud=115200; f->enter_size=0; w->identity=device; snprintf(w->notice,sizeof(w->notice),"Disconnected | USB-SERIAL CH340 (fixture) | 115200 baud");
         ps_menu_set_notice(w->shell,notice,w); ps_menu_set_description(w->shell,description,w); main_menu(w);
-        if(!strcmp(argv[1],"--preview-settings")) { CHECK(ps_panel_open(w->shell,0)); ps_tick(w->shell,100); }
+        if(!strcmp(argv[1],"--preview-settings")) { CHECK(ps_menu_choose(w->shell,2)==0); run_action(w); CHECK(ps_panel_active(w->shell)); }
         out=fopen(argv[2],"wb"); CHECK(out); fwrite(captured,1,capture_size,out); fclose(out);
     }
     ps_close(w->shell); free(w->memory); free(w); free(f); return 0;

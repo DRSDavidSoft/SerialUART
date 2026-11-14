@@ -59,6 +59,7 @@ class Console(unittest.TestCase):
                 # Change Baud through the actual inline field editor.
                 os.write(console,b'\r\x159600\r')
                 time.sleep(.1)
+                os.write(console,b'\x1b'); time.sleep(.12)
                 command('connect'); until(b'Connected')
                 if sys.platform.startswith('linux'):
                     # PTY termios2 validated elsewhere; the live settings must show requested rate.
