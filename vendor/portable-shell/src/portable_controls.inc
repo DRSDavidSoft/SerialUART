@@ -637,7 +637,7 @@ PS_API int ps_panel_select(ps_session *s,unsigned id){
     return 0;
 }
 PS_API int ps_panel_open(ps_session *s, unsigned page) {
-    if (!s || ps_form_active(s) || !s->panel || page >= s->panel->count || !(s->io.flags & PS_INTERACTIVE))
+    if (!s || s->panel_dialog_columns || ps_form_active(s) || !s->panel || page >= s->panel->count || !(s->io.flags & PS_INTERACTIVE))
         return 0;
     s->control_view = 1;
     s->dialog = 0;

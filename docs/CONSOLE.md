@@ -8,7 +8,9 @@ SerialUART --match CH340 --reconnect 1000
 
 Choose **Ports**, filter the list with `/`, then select a device. Selection does
 not open the port. **Settings** edits baud, framing, flow control, DTR policy and
-reconnect interval in their cells. Choose **Connect** when ready; it becomes
+reconnect interval in a centered dialog. The dialog combines connection and
+terminal settings, with two settings per row when space permits. A zero reconnect
+interval disables retries. Choose **Connect** when ready; it becomes
 **Disconnect**, which closes the port and cancels automatic reconnect.
 Settings that affect opening/framing are locked while connected or reconnecting.
 The console starts disconnected even when a selector is supplied.
@@ -16,7 +18,7 @@ The console starts disconnected even when a selector is supplied.
 ![Console menu emitted by the real framework with fixture device metadata](console.svg)
 
 The embedded PortableShell C99 framework provides responsive menus, searchable
-lists, editable tabbed tables, forms, read-only scrolling reports, semantic
+lists, editable settings dialogs, forms, read-only scrolling reports, semantic
 colors, command history/completion and terminal resize handling. Its application
 registry contains SerialUART commands only; it never executes an OS shell.
 Both stdin and stdout must be terminals. `SerialUART` opens this workspace by
@@ -25,21 +27,21 @@ full-application binary pipeline, or `SendCommand` for the small pipeline tool.
 `--terminal` selects the direct terminal without menus. Redirected input/output
 in default interactive mode is rejected; menus never enter a binary pipe.
 
-![Editable connection settings rendered from actual console output](console-settings.svg)
+![Centered settings dialog rendered from actual console output](console-settings.svg)
 
 ## Keys and navigation
 
 | Context | Keys |
 |---|---|
 | Menu/list | ↑/↓, Enter, Esc; `/` filters a port list |
-| Settings | Enter edits a cell; Ctrl+U clears it; Esc cancels; Tab changes page |
+| Settings | Arrows or Tab move; Enter edits or changes the value; Ctrl+U clears a draft; Esc cancels or returns to the menu |
 | Command prompt | `menu`, `ports`, `settings`, `connect [PATH]`, `disconnect` |
 | Terminal | Ctrl+] then `m` returns to the menu; `q` quits; `]` sends literal Ctrl+] |
 | Read-only reports | Scroll with navigation keys; Esc returns to the prompt |
 
 Use **Terminal** after connecting. Ctrl+C and Ctrl+D are delivered to the board.
 Local echo, line editing, display format and custom Enter bytes are editable in
-the Terminal settings page. Returning to the menu discards an unsubmitted line.
+the Settings dialog. Returning to the menu discards an unsubmitted line.
 Type `help` at the command prompt for the console guide.
 
 ## Inspect, capture and transmit
@@ -101,7 +103,7 @@ unbound USB devices or a diagnosis of every missing-driver/descriptor failure.
 
 The PortableShell framework is pinned at
 [`76685c2`](https://github.com/atomicdeploy/portable-shell/tree/76685c29dc56842ea86e0a0e8dbf2cdb71b50c88).
-Its unmodified C sources and MIT notice are included; no installed runtime
+Its C sources and MIT notice are included, along with the centered panel dialog backport; no installed runtime
 library or dependency fetch is required. The UI is confined to the CLI adapter.
 
 Discovery and selection were compared with PCController's

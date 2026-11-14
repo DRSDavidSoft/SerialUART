@@ -214,6 +214,10 @@ typedef struct {
 } ps_panel;
 PS_API int ps_panel_attach(ps_session *, const ps_panel *); /* NULL detaches */
 PS_API int ps_panel_open(ps_session *, unsigned page);
+/* Open one page in a content-sized dialog over the current framed menu.
+   Pass 1..4 preferred columns. Narrow terminals use fewer columns.
+   Escape closes the dialog and restores the menu or command prompt. */
+PS_API int ps_panel_open_dialog(ps_session *, unsigned page, unsigned columns);
 /* Zero when closed; otherwise the active page index plus one. */
 PS_API unsigned ps_panel_active(const ps_session *);
 /* Optional application shortcuts, dispatched only outside cell editing. Return

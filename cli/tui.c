@@ -138,7 +138,7 @@ static void ports(workspace *w) {
     ps_menu_set_style(w->shell,PS_MENU_TABLE|PS_MENU_LIST|PS_MENU_DETAILS|PS_MENU_MARKER); ps_menu_open(w->shell,&w->picker);
 }
 static const char *const parities[]={"None","Even","Odd","Mark","Space"};
-static const char *const stops[]={"1","2","1.5 (Windows, 5 bits)"};
+static const char *const stops[]={"1","2","1.5 (Windows)"};
 static const char *const dtrs[]={"Keep","Low","High","Reset pulse"};
 static const char *const displays[]={"UTF-8","ASCII","Hex controls"};
 static const ps_control serial_controls[]={
@@ -149,14 +149,13 @@ static const ps_control serial_controls[]={
     {4,"Serial framing","RTS / CTS",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {5,"Open policy","DTR",PS_CONTROL_CHOICE,0,3,1,dtrs,4},
     {6,"Open policy","Boot wait (ms)",PS_CONTROL_LEVEL,0,60000,100,NULL,0},
-    {7,"Open policy","Reconnect ms (0 off)",PS_CONTROL_LEVEL,0,60000,100,NULL,0}};
-static const ps_control terminal_controls[]={
+    {7,"Open policy","Reconnect (ms)",PS_CONTROL_LEVEL,0,60000,100,NULL,0},
     {8,"Session","Local echo",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {9,"Session","Line editing",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {10,"Session","Display",PS_CONTROL_CHOICE,0,2,1,displays,3},
     {11,"Session","Strip remote titles",PS_CONTROL_TOGGLE,0,1,1,NULL,0},
     {12,"Session","Enter bytes (hex)",PS_CONTROL_TEXT,0,0,0,NULL,0}};
-static const ps_control_page pages[]={{"Connection",serial_controls,8},{"Terminal",terminal_controls,5}};
+static const ps_control_page pages[]={{"Settings",serial_controls,sizeof(serial_controls)/sizeof(serial_controls[0])}};
 static int read_setting(void *ctx,unsigned id,ps_control_value *v) {
     workspace *w=(workspace *)ctx; const char *p; size_t i;
     v->flags=PS_CONTROL_VALID|PS_CONTROL_NUMBER_ONLY; v->revision=w->revision;
@@ -256,7 +255,11 @@ static void run_action(workspace *w) {
     else if(a==SELECT_PORT && w->index<w->count) {
         if(w->port || w->wanted) { w->error=1; status(w,"Disconnect before choosing another device"); }
         else { w->identity=w->devices[w->index]; snprintf(w->path,sizeof(w->path),"%s",w->identity.device.path); w->selector.path=w->path; w->pinned=0; w->features->pinned=0; status(w,"Device selected; choose Connect"); main_menu(w); }
-    } else if(a==SETTINGS) ps_panel_open(w->shell,0);
+    } else if(a==SETTINGS) {
+        main_menu(w);
+        ps_key(w->shell,PS_KEY_DOWN); /* Keep Settings selected behind the dialog. */
+        ps_panel_open_dialog(w->shell,0,2);
+    }
     else if(a==CONNECT) {
         if(w->port || w->wanted) { disconnect(w); status(w,"Disconnected"); }
         else {
@@ -315,7 +318,7 @@ static void run_action(workspace *w) {
             open_report(w,a==HISTORY?"Receive history | control bytes escaped":"Hex receive history");
         } else if(a==HELP) {
             report(w,"SerialUART %s\n\n",SUART_VERSION);
-            report(w,"Ports: / filters the list; Enter selects without opening.\nSettings: Enter edits a cell; Esc cancels; Tab changes page.\nEscape closes a view to the command prompt. Type menu to return.\nTerminal: Ctrl+] m menu, Ctrl+] q quit, Ctrl+] ] literal prefix.\nCtrl+C/D are passed to the board in Terminal.\n\nCommands: menu, ports, settings, connect [PATH], disconnect,\nterminal, details, signals, history, hex, sendhex HEX, help, quit.\n\nMenus keep receiving bytes into an 8192-byte ring; the oldest bytes\nare replaced. History is a snapshot; reopen to refresh. Hex shows\nthe latest 1024 bytes. --log FILE captures the full stream.\n\nReconnect follows the selected serial/instance/path identity.\nDisconnect cancels retries. No uncertain writes are replayed.\nNo shell commands or external programs are executed.\n"); open_report(w,"Console guide");
+            report(w,"Ports: / filters the list; Enter selects without opening.\nSettings: arrows or Tab move; Enter changes the value; Esc closes.\nEscape closes Settings to the menu, or other views to the command prompt. Type menu to return.\nTerminal: Ctrl+] m menu, Ctrl+] q quit, Ctrl+] ] literal prefix.\nCtrl+C/D are passed to the board in Terminal.\n\nCommands: menu, ports, settings, connect [PATH], disconnect,\nterminal, details, signals, history, hex, sendhex HEX, help, quit.\n\nMenus keep receiving bytes into an 8192-byte ring; the oldest bytes\nare replaced. History is a snapshot; reopen to refresh. Hex shows\nthe latest 1024 bytes. --log FILE captures the full stream.\n\nReconnect follows the selected serial/instance/path identity.\nDisconnect cancels retries. No uncertain writes are replayed.\nNo shell commands or external programs are executed.\n"); open_report(w,"Console guide");
         }
     }
     w->argument[0]=0;
@@ -357,7 +360,7 @@ int sc_tui_run(sc_session *features,const suart_selector *selector,const suart_c
     ps_set_prompt(w->shell,"serial> ",PS_STYLE_PROMPT); ps_set_application_title(w->shell,"SerialUART");
     ps_menu_set_description(w->shell,description,w); ps_menu_set_notice(w->shell,notice,w);
     w->panel.title="Serial settings"; w->panel.status="Connection settings apply on the next explicit Connect";
-    w->panel.pages=pages; w->panel.count=2; w->panel.read=read_setting; w->panel.write=write_setting; w->panel.context=w; ps_panel_attach(w->shell,&w->panel);
+    w->panel.pages=pages; w->panel.count=1; w->panel.read=read_setting; w->panel.write=write_setting; w->panel.context=w; ps_panel_attach(w->shell,&w->panel);
     ps_start(w->shell); snprintf(w->notice,sizeof(w->notice),"Disconnected | choose a port or use connect PATH"); main_menu(w);
     while(!w->quit && !*stopping && !w->output_error && !ps_exited(w->shell)) {
         unsigned char bytes[4096]; size_t n=0,i; unsigned cols,rows; int rc;
