@@ -879,7 +879,7 @@ static unsigned tab_count(ps_session *s) {
 }
 typedef struct {
     const ps_column *columns;
-    unsigned count, widths[3];
+    unsigned count, widths[8];
 } Grid;
 static unsigned table_gutter(ps_session *s);
 static Grid grid_for(ps_session *s) {
