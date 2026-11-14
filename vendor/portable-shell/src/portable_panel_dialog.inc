@@ -1,4 +1,4 @@
-/* A page dialog shares the ordinary panel's validation and inline editor. */
+/* Dialog geometry for the shared table cells, rules and inline editor. */
 typedef struct {
     unsigned x, y, width, height, columns, rows, visible, label, value, stride;
 } PanelDialog;
@@ -30,28 +30,42 @@ static PanelDialog panel_dialog_layout(ps_session *s) {
     }
     box.label = min(box.label, 36);
     box.value = min(box.value, 32);
-    box.stride = box.label + box.value + 5;
+    box.stride = box.label + box.value + 6;
     box.columns = min(s->panel_dialog_columns, min(page->count ? page->count : 1, space / box.stride));
     if (!box.columns) {
         box.columns = 1;
-        box.label = min(box.label, (space - 5) / 2);
-        box.value = space - 5 - box.label;
-        box.stride = space;
+        box.label = min(box.label, space > 7 ? (space - 6) / 2 : 1);
+        box.value = space > box.label + 6 ? space - box.label - 6 : 1;
+        box.stride = box.label + box.value + 6;
     }
     box.width = box.columns * box.stride + 1;
-    box.width = min(s->io.columns - 1, box.width < 38 ? 38 : box.width);
+    if (box.columns == 1 && box.width < 38 && box.width < s->io.columns - 1) {
+        unsigned extra = min(38, s->io.columns - 1) - box.width;
+        box.value += extra;
+        box.stride += extra;
+        box.width += extra;
+    }
     box.rows = (page->count + box.columns - 1) / box.columns;
-    box.visible = min(box.rows, s->io.rows > 5 ? s->io.rows - 5 : s->io.rows - 3);
-    box.height = box.visible + 3;
-    box.x = (s->io.columns - box.width) / 2 + 1;
-    box.y = (s->io.rows - box.height) / 2 + 1;
+    box.visible = s->io.rows > 6 ? min(box.rows, s->io.rows - 6) : 0;
+    box.height = box.visible + 6;
+    box.x = box.width < s->io.columns ? (s->io.columns - box.width) / 2 + 1 : 1;
+    box.y = box.height < s->io.rows ? (s->io.rows - box.height) / 2 + 1 : 1;
     return box;
+}
+
+static void panel_dialog_rule(ps_session *s, const Grid *grid, unsigned y, unsigned x,
+                              unsigned kind, int joined) {
+    at(s, y, x);
+    surface(s, 0);
+    grid_border(s, grid, kind, joined);
 }
 
 static void panel_dialog_draw(ps_session *s) {
     const ps_control_page *page = &s->panel->pages[s->tab];
     PanelDialog box = panel_dialog_layout(s);
+    Grid grid = {0}, pair = {0}, footer_grid = {0};
     unsigned row, col, focus = s->selected / box.columns;
+    unsigned footer_y = box.y + box.visible + 3;
     const char *footer = (s->io.flags & PS_UNICODE) ? "←↑↓→ Move  Enter Edit  Esc Close"
                                                   : "Tab Move  Enter Edit  Esc Close";
     s->dirty = 0;
@@ -61,79 +75,111 @@ static void panel_dialog_draw(ps_session *s) {
     if (focus >= s->scroll + box.visible && box.visible) s->scroll = focus - box.visible + 1;
     s->scroll = min(s->scroll, box.rows - box.visible);
 
-    frame_begin(s);
+    /* Erase in the theme's base color before drawing either layer. */
+    reset(s);
     s->canvas_kind = 0;
     if (s->menu_screen && menu_framed(s)) menu_draw(s);
-    else {
-        reset(s);
-        ansi(s, "\033[2J");
+    else ansi(s, "\033[2J");
+    frame_begin(s);
+    ansi(s, "\033[?25l");
+    if (s->io.columns < 12 || s->io.rows < 7) {
+        at(s, 1, 1);
+        field(s, "Resize or Esc", s->io.columns - 1);
+        frame_end(s);
+        return;
     }
-    view_rule_color(s, box.y, box.x, box.width, 0, "\033[36m");
-    at(s, box.y, box.x + 1);
-    surface(s, 2);
-    ink(s, PS_INK_HEADING);
-    field(s, s->panel->title, min(box.width - 2,
-          cells(s->panel->title, length(s->panel->title), s->io.flags)));
 
-    for (row = 0; row <= box.visible; ++row) {
-        at(s, box.y + row + 1, box.x);
-        surface(s, 2);
-        ink(s, PS_INK_BORDER);
-        out(s, (s->io.flags & PS_UNICODE) ? "│" : "|");
-        spaces(s, box.width - 2);
-        out(s, (s->io.flags & PS_UNICODE) ? "│" : "|");
+    pair.count = 2;
+    pair.widths[0] = box.label;
+    pair.widths[1] = box.value;
+    grid.count = box.columns * 2;
+    for (col = 0; col < grid.count; ++col)
+        grid.widths[col] = pair.widths[col % 2];
+    footer_grid.count = 1;
+    footer_grid.widths[0] = box.width - 4;
+
+    panel_dialog_rule(s, &grid, box.y, box.x, 0, 1);
+    at(s, box.y, box.x + 2);
+    surface(s, 0);
+    ink(s, PS_INK_TEXT);
+    out(s, " ");
+    field(s, s->panel->title, min(box.width - 6,
+          cells(s->panel->title, length(s->panel->title), s->io.flags)));
+    out(s, " ");
+    reset(s);
+
+    at(s, box.y + 1, box.x);
+    surface(s, 0);
+    grid_vertical(s);
+    out(s, " ");
+    for (col = 0; col < grid.count; ++col) {
+        ink(s, PS_INK_HEADING);
+        field(s, col % 2 ? "Value" : "Control", grid.widths[col]);
+        if (col + 1 < grid.count) grid_divide(s);
     }
-    view_rule_color(s, box.y + box.height - 1, box.x, box.width, 1, "\033[36m");
+    out(s, " ");
+    grid_vertical(s);
+    reset(s);
+    panel_dialog_rule(s, &grid, box.y + 2, box.x, 1, 1);
 
     for (row = 0; row < box.visible; ++row) {
+        unsigned y = box.y + row + 3;
+        at(s, y, box.x);
+        surface(s, 0);
+        grid_vertical(s);
+        out(s, " ");
         for (col = 0; col < box.columns; ++col) {
             unsigned index = (s->scroll + row) * box.columns + col;
-            unsigned y = box.y + row + 1;
-            unsigned x = box.x + 2 + col * box.stride;
-            const ps_control *control;
-            ps_control_value value;
-            char display[80];
-            if (index >= page->count) break;
-            control = &page->controls[index];
-            control_read(s, control, &value);
-            control_value_text(s, control, &value, display, sizeof display);
-            at(s, y, x);
-            surface(s, 2);
-            if (index == s->selected) view_selection(s);
-            else ink(s, value.flags & PS_CONTROL_LOCKED ? PS_INK_INACTIVE : PS_INK_TEXT);
-            grid_text(s, control->label, box.label);
-            out(s, "  ");
-            if (index != s->selected)
-                ink(s, value.flags & PS_CONTROL_LOCKED ? PS_INK_INACTIVE :
-                       control->kind == PS_CONTROL_LEVEL ? PS_INK_NUMBER : PS_INK_ACTION);
-            if (index == s->selected && s->editing && !s->dialog) {
-                unsigned start = 0;
-                while (start < s->editpos &&
-                       cells(s->edit + start, s->editpos - start, s->io.flags) >= box.value)
-                    start = next(s->edit, start);
-                grid_text(s, s->edit + start, box.value);
-                s->mouse_edit_x = x + box.label + 2;
-                s->mouse_edit_y = y;
-                s->mouse_edit_start = start;
-                s->mouse_edit_width = box.value;
-            } else grid_text(s, display, box.value);
-            reset(s);
+            if (index < page->count) {
+                if (index == s->selected) {
+                    if (s->io.flags & PS_COLOR) surface(s, 2);
+                    else ansi(s, "\033[7m");
+                }
+                control_row(s, index, &pair);
+                reset(s);
+                surface(s, 0);
+                if (index == s->selected && s->editing && !s->dialog) {
+                    unsigned start = 0;
+                    while (start < s->editpos &&
+                           cells(s->edit + start, s->editpos - start, s->io.flags) >= box.value)
+                        start = next(s->edit, start);
+                    s->mouse_edit_x = box.x + 2 + col * box.stride + box.label + 3;
+                    s->mouse_edit_y = y;
+                    s->mouse_edit_start = start;
+                    s->mouse_edit_width = box.value;
+                }
+            } else {
+                spaces(s, box.label);
+                grid_divide(s);
+                spaces(s, box.value);
+            }
+            if (col + 1 < box.columns) grid_divide(s);
         }
+        out(s, " ");
+        grid_vertical(s);
+        reset(s);
     }
+    panel_dialog_rule(s, &grid, footer_y, box.x, 3, 1);
     if (s->editing) footer = "Enter Apply  Esc Cancel";
     if (s->notice[0]) footer = s->notice;
-    at(s, box.y + box.visible + 1, box.x + 1);
-    surface(s, 2);
+    at(s, footer_y + 1, box.x);
+    surface(s, 0);
+    grid_vertical(s);
+    out(s, " ");
     ink(s, PS_INK_MUTED);
-    field(s, footer, box.width - 2);
+    field(s, footer, box.width - 4);
+    out(s, " ");
+    grid_vertical(s);
     reset(s);
+    panel_dialog_rule(s, &footer_grid, footer_y + 2, box.x, 2, 0);
+
     if (s->mouse_edit_width) {
         at(s, s->mouse_edit_y, s->mouse_edit_x +
            cells(s->edit + s->mouse_edit_start, s->editpos - s->mouse_edit_start, s->io.flags));
         ansi(s, "\033[?25h");
     } else if (s->editing && s->dialog && s->io.rows >= 14 && s->io.columns >= 42) {
-        control_overlay(s, 0); /* The action confirmation does not use table geometry. */
-    } else ansi(s, "\033[?25l");
+        control_overlay(s, &pair);
+    }
     frame_end(s);
 }
 
@@ -144,7 +190,7 @@ static void panel_dialog_key(ps_session *s, unsigned key) {
     s->dirty = 1;
     if (s->editing) { control_key(s, key); return; }
     if (key == 27 || key == 3) { table_close(s); return; }
-    if (!page->count) return;
+    if (!page->count || s->io.columns < 12 || s->io.rows < 7) return;
     s->notice[0] = 0;
     if (key == PS_KEY_UP && s->selected >= columns) s->selected -= columns;
     else if (key == PS_KEY_DOWN && s->selected + columns < page->count) s->selected += columns;
@@ -170,7 +216,7 @@ static void panel_dialog_key(ps_session *s, unsigned key) {
 static void panel_dialog_mouse(ps_session *s, const ps_mouse_event *event) {
     PanelDialog box = panel_dialog_layout(s);
     unsigned column, index;
-    if (event->release || (event->button & 60u)) return;
+    if (s->io.columns < 12 || s->io.rows < 7 || event->release || (event->button & 60u)) return;
     if (s->editing) {
         if (event->button == 2) panel_dialog_key(s, 27);
         return;
@@ -179,11 +225,11 @@ static void panel_dialog_mouse(ps_session *s, const ps_mouse_event *event) {
         panel_dialog_key(s, event->button == 64 ? PS_KEY_UP : PS_KEY_DOWN);
         return;
     }
-    if (event->button || event->column < box.x + 2 || event->row <= box.y ||
-        event->row > box.y + box.visible) return;
+    if (event->button || event->column < box.x + 2 || event->row < box.y + 3 ||
+        event->row >= box.y + 3 + box.visible) return;
     column = (event->column - box.x - 2) / box.stride;
     if (column >= box.columns || event->column >= box.x + box.width - 1) return;
-    index = (s->scroll + event->row - box.y - 1) * box.columns + column;
+    index = (s->scroll + event->row - box.y - 3) * box.columns + column;
     if (index >= s->panel->pages[s->tab].count) return;
     s->selected = index;
     s->notice[0] = 0;
