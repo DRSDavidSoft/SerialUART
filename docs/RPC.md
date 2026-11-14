@@ -34,7 +34,7 @@ named-pipe/Unix-socket listener in this version. Stdio supplies portable local I
 ```
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"application":"SerialUART","version":"2.4.0","api_version":1,"request_bytes":16384,"transfer_bytes":4096,"transports":["stdio","tcp","websocket"],"discovery_source":"Windows present SetupAPI Ports / Configuration Manager"}}
+{"jsonrpc":"2.0","id":1,"result":{"application":"SerialUART","version":"2.4.1","api_version":1,"request_bytes":16384,"transfer_bytes":4096,"transports":["stdio","tcp","websocket"],"discovery_source":"Windows present SetupAPI Ports / Configuration Manager"}}
 ```
 
 The discovery source is platform-specific. IDs are echoed unchanged. String,

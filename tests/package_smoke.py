@@ -39,7 +39,7 @@ int main(void) {
     subprocess.run([str(exe)], check=True, env=env)
     cli = prefix / "bin" / ("SendCommand.exe" if os.name == "nt" else "SendCommand")
     version = subprocess.check_output([str(cli), "--version"], env=env).strip()
-    if version != b"2.4.0":
+    if version != b"2.4.1":
         raise SystemExit("Installed executable version differs from expected package")
     manifest = list(prefix.glob("share/doc/SerialUART/BUILD-INFO.txt"))
     if not manifest or "Source commit:" not in manifest[0].read_text():
@@ -56,6 +56,9 @@ int main(void) {
 
     app = prefix / "bin" / ("SerialUART.exe" if os.name == "nt" else "SerialUART")
     assert subprocess.check_output([str(app), "--version"], env=env).strip() == version
+    if os.name == "nt":
+        from windows_resources import verify
+        verify([app, cli, loopback], version.decode("ascii"))
     request = b'{"jsonrpc":"2.0","id":1,"method":"system.info"}\n'
     result = subprocess.run([str(app), "--api", "stdio"], input=request,
                             capture_output=True, check=True, timeout=10, env=env)

@@ -143,6 +143,10 @@ It prints each complete compiler command, so it can also be run manually without
 Python. GCC/Clang builds use C99; MSVC uses `/std:c11`. On Linux it includes the
 native termios2 helper; macOS links IOKit/CoreFoundation; Windows links the native
 serial SDK libraries and adds Winsock only to the full application.
+Windows builds embed the suite icon and version information using the Windows
+SDK resource compiler (MSVC) or `windres` (MinGW). The checked-in ICO contains
+16, 24, 32, 48, 64, 128 and 256 pixel sizes. Its editable source is
+[`platform/windows/serialuart.svg`](../platform/windows/serialuart.svg).
 To build just the mini sender with GCC on Linux:
 
 ```sh
@@ -170,7 +174,7 @@ public header, `SerialLoopback`, CMake config, source/compiler manifest, guides 
 SHA-256 sidecar. CI packages are retained as downloadable run artifacts.
 
 The `SerialUART complete` job reports overall build health and is suitable as a
-required branch check. Tag `v2.4.0` (matching the source version) to run the same
+required branch check. Tag `v2.4.1` (matching the source version) to run the same
 checks and create a **draft** release with all 11 ZIPs and `SHA256SUMS`. Existing
 releases are not overwritten. Packages receive GitHub build-provenance attestations.
 Review the draft and publish it manually.
